@@ -1,0 +1,17 @@
+{
+  "name": "tinypg",
+  "version": "0.0.1",
+  "description": "Easy way to call sql files using postgres.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Joe Andaverde",
+  "license": "MIT",
+  "dependencies": {
+    "glob": "^5.0.3",
+    "pg": "^4.3.0",
+    "psql": "0.0.1",
+    "q": "^1.2.0"
+  }
+}

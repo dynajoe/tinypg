@@ -3,11 +3,12 @@ var Q = require('q');
 var Glob = require('glob');
 var Fs = require('fs');
 var Path = require('path');
+var Case = require('case');
 
 var Tiny = function (options) {
    this.connString = options.connectionString || options.connection_string;
-   var results = parseFiles(options.files);
-   this.db = createDbCalls(this, results);
+   var results = parseFiles(options.root_dir || options.rootDir);
+   this.sql = createDbCalls(this, results, (options.snake ? Case.snake : Case.camel).bind(Case));
 };
 
 Tiny.prototype.connection = function () {
@@ -24,14 +25,14 @@ Tiny.prototype.connection = function () {
    return d.promise;
 };
 
-var createDbCalls = function (db, config) {
+var createDbCalls = function (db, callConfigs, transformPath) {
    var result = {};
 
-   for (var x in config) {
-      var c = config[x];
-      var p = Path.parse(c.path);
+   for (var x in callConfigs) {
+      var c = callConfigs[x];
+      var p = Path.parse(c.relative_path);
       var key = p.dir.split(Path.sep).concat(p.name).slice(1);
-      setProperty(result, key, dbCall(db, c));
+      setProperty(result, key, dbCall(db, c), transformPath);
    }
 
    return result;
@@ -61,19 +62,26 @@ var dbCall = function (db, config) {
    };
 };
 
-var setProperty = function (obj, path, value) {
+var setProperty = function (obj, path, value, transformPath) {
+   if (path[0] == null || path[0].trim() == '') {
+      return setProperty(obj, path.slice(1), value, transformPath);
+   }
+
+   var pathPart = transformPath(path[0]);
+
    if (path.length > 1) {
-      obj[path[0]] = obj[path[0]] || {};
-      return setProperty(obj[path[0]], path.slice(1), value);
+      obj[pathPart] = obj[pathPart] || {};
+      return setProperty(obj[pathPart], path.slice(1), value, transformPath);
    }
    else {
-      obj[path[0]] = value;
+      obj[pathPart] = value;
       return obj;
    }
 };
 
-var parseFiles = function (pattern) {
-   var files = Glob.sync(pattern);
+var parseFiles = function (rootDir) {
+   var root = Path.resolve(rootDir);
+   var files = Glob.sync(Path.join(root, './**/*.sql'));
    var sqlFiles = [];
 
    for (var i = 0; i < files.length; i++) {
@@ -81,6 +89,7 @@ var parseFiles = function (pattern) {
 
       var data = {
          path: f,
+         relative_path: f.substring(root.length),
          text: Fs.readFileSync(f).toString(),
          mapping: []
       };

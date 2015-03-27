@@ -5,14 +5,14 @@ var Fs = require('fs');
 var Path = require('path');
 var Case = require('case');
 
-var Tiny = function (pg, options) {
+var Tiny = function (options) {
    this.connString = options.connectionString || options.connection_string;
    var results = parseFiles(options.root_dir || options.rootDir);
    this.sql = createDbCalls(this, results, (options.snake ? Case.snake : Case.camel).bind(Case));
    this.Pg = Pg;
 };
 
-Tiny.pg = pg;
+Tiny.pg = Pg;
 
 Tiny.pgDefaults = function (obj) {
    for (var k in obj) {

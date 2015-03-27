@@ -5,13 +5,24 @@ var Fs = require('fs');
 var Path = require('path');
 var Case = require('case');
 
-var Tiny = function (options) {
+var Tiny = function (pg, options) {
    this.connString = options.connectionString || options.connection_string;
    var results = parseFiles(options.root_dir || options.rootDir);
    this.sql = createDbCalls(this, results, (options.snake ? Case.snake : Case.camel).bind(Case));
+   this.Pg = Pg;
 };
 
-Tiny.prototype.connection = function () {
+Tiny.pg = pg;
+
+Tiny.pgDefaults = function (obj) {
+   for (var k in obj) {
+      if (obj.hasOwnProperty(k)) {
+         Pg.defaults[k] = obj[k];
+      }
+   }
+};
+
+Tiny.prototype.getClient = function () {
    var d = Q.defer();
 
    Pg.connect(this.connString, function (err, client, done) {
@@ -40,7 +51,7 @@ var createDbCalls = function (db, callConfigs, transformPath) {
 
 var dbCall = function (db, config) {
    return function (args) {
-      return db.connection().then(function (result) {
+      return db.getClient().then(function (result) {
          var values = config.mapping.map(function (m) {
             return args[m.name];
          });

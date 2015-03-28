@@ -1,6 +1,6 @@
 {
   "name": "tinypg",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Easy way to call sql files using postgres.",
   "main": "index.js",
   "scripts": {
@@ -10,7 +10,14 @@
     "type": "git",
     "url": "http://github.com/joeandaverde/tinypg.git"
   },
+  "homepage": "http://github.com/joeandaverde/tinypg",
   "author": "Joe Andaverde",
+  "keywords": [
+    "postgres",
+    "sql",
+    "db",
+    "query"
+  ],
   "license": "MIT",
   "dependencies": {
     "case": "^1.2.1",

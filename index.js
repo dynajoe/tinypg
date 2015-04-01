@@ -9,7 +9,7 @@ var Tiny = function (options) {
    this.connString = options.connectionString || options.connection_string;
    var results = parseFiles(options.root_dir || options.rootDir);
    this.sql = createDbCalls(this, results, (options.snake ? Case.snake : Case.camel).bind(Case));
-   this.Pg = Pg;
+   this.pg = Pg;
 };
 
 Tiny.pg = Pg;
@@ -20,6 +20,11 @@ Tiny.pgDefaults = function (obj) {
          Pg.defaults[k] = obj[k];
       }
    }
+};
+
+Tiny.prototype.query = function (query, params) {
+   var result = parseSql(query);
+   return dbCall(this, result)(params);
 };
 
 Tiny.prototype.getClient = function () {
@@ -101,33 +106,42 @@ var parseFiles = function (rootDir) {
       var data = {
          path: f,
          relative_path: f.substring(root.length),
-         text: Fs.readFileSync(f).toString(),
-         mapping: []
+         text: Fs.readFileSync(f).toString()
       };
 
-      var match;
-      var parts = data.text.split(/(:\w+)/);
-      var varIdx = 1;
-
-      var result = parts.reduce(function (curr, next, idx) {
-         if (next.indexOf(':') == 0) {
-            data.mapping.push({
-               name: next.replace(':', ''),
-               index: varIdx
-            });
-
-            return curr + '$' + (varIdx++);
-         }
-
-         return curr + next;
-      });
-
-      data.transformed = result;
+      var result = parseSql(data.text);
+      data.transformed = result.transformed;
+      data.mapping = result.mapping;
 
       sqlFiles.push(data);
    }
 
    return sqlFiles;
+};
+
+var parseSql = function (sql) {
+   var match;
+   var parts = sql.split(/(:\w+)/);
+   var varIdx = 1;
+   var mapping = [];
+
+   var result = parts.reduce(function (curr, next, idx) {
+      if (next.indexOf(':') == 0) {
+         mapping.push({
+            name: next.replace(':', ''),
+            index: varIdx
+         });
+
+         return curr + '$' + (varIdx++);
+      }
+
+      return curr + next;
+   });
+
+   return {
+      mapping: mapping,
+      transformed: result
+   };
 };
 
 module.exports = Tiny;

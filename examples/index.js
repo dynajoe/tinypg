@@ -9,3 +9,9 @@ var t = new Tiny({
 t.sql.fetch_user_by_name({ name: 'Joe' })
 .then(function () { })
 .fail(function () { });
+
+t.query('SELECT * FROM users where name = :name', {
+   name: 'Joe'
+})
+.then(function () { })
+.fail(function () { });

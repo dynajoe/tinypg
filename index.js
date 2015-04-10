@@ -4,6 +4,7 @@ var Glob = require('glob');
 var Fs = require('fs');
 var Path = require('path');
 var Case = require('case');
+var Parser = require('./parser');
 
 var Tiny = function (options) {
    this.connString = options.connectionString || options.connection_string;
@@ -23,7 +24,7 @@ Tiny.pgDefaults = function (obj) {
 };
 
 Tiny.prototype.query = function (query, params) {
-   var result = parseSql(query);
+   var result = Parser.parseSql(query);
    return dbCall(this, result)(params);
 };
 
@@ -109,7 +110,7 @@ var parseFiles = function (rootDir) {
          text: Fs.readFileSync(f).toString()
       };
 
-      var result = parseSql(data.text);
+      var result = Parser.parseSql(data.text);
       data.transformed = result.transformed;
       data.mapping = result.mapping;
 
@@ -117,31 +118,6 @@ var parseFiles = function (rootDir) {
    }
 
    return sqlFiles;
-};
-
-var parseSql = function (sql) {
-   var match;
-   var parts = sql.split(/(:\w+)/);
-   var varIdx = 1;
-   var mapping = [];
-
-   var result = parts.reduce(function (curr, next, idx) {
-      if (next.indexOf(':') == 0) {
-         mapping.push({
-            name: next.replace(':', ''),
-            index: varIdx
-         });
-
-         return curr + '$' + (varIdx++);
-      }
-
-      return curr + next;
-   });
-
-   return {
-      mapping: mapping,
-      transformed: result
-   };
 };
 
 module.exports = Tiny;

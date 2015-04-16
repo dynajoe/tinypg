@@ -1,4 +1,4 @@
-var Parser = require('../parser');
+var Parser = require('../src/parser');
 var Expect = require('chai').expect;
 
 describe('transform', function () {

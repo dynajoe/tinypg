@@ -1,3 +1,7 @@
+var Fs = require('fs');
+var Glob = require('glob');
+var Path = require('path');
+
 var parseSql = function (sql) {
    var consumeVar = false;
    var validChar = /\w/;
@@ -45,8 +49,33 @@ var parseSql = function (sql) {
       transformed: result.join(''),
       mapping: mapping
    }
-}
+};
+
+var parseFiles = function (rootDir) {
+   var root = Path.resolve(rootDir);
+   var files = Glob.sync(Path.join(root, './**/*.sql'));
+   var sqlFiles = [];
+
+   for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+
+      var data = {
+         path: f,
+         relative_path: f.substring(root.length),
+         text: Fs.readFileSync(f).toString()
+      };
+
+      var result = parseSql(data.text);
+      data.transformed = result.transformed;
+      data.mapping = result.mapping;
+
+      sqlFiles.push(data);
+   }
+
+   return sqlFiles;
+};
 
 module.exports = {
-   parseSql: parseSql
+   parseSql: parseSql,
+   parseFiles: parseFiles
 };

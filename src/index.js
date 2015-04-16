@@ -25,21 +25,18 @@ var setSql = function (db) {
 
 var dbCall = function (clientCtx, config) {
    return function (params) {
-      var clientQuery = Q.nbind(clientCtx.client.query, clientCtx.client);
-
       var values = config.mapping.map(function (m) {
          return params[m.name];
       });
 
-      return clientQuery(config.transformed, values)
-      .spread(function (res) {
+      var deferred = Q.defer();
+
+      clientCtx.client.query(config.transformed, values, function (err, data) {
          clientCtx.done();
-         return res;
-      })
-      .catch(function (err) {
-         clientCtx.done();
-         throw err;
+         err ? deferred.reject(err) : deferred.resolve(data);
       });
+
+      return deferred.promise;
    };
 };
 

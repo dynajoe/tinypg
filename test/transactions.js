@@ -2,53 +2,10 @@ var Tiny = require('../src/index')
 var Q = require('q');
 var Pg = require('pg');
 var expect = require('chai').expect;
-
-var dbName = 'tiny_test_db';
-var connectionString = 'postgres://joe@localhost:5432/';
-
-var setUpDb = function (cb) {
-   var commands = [
-      'DROP SCHEMA IF EXISTS ' + dbName + ' cascade ',
-      'SET search_path TO ' + dbName,
-      'CREATE SCHEMA ' + dbName,
-      'CREATE TABLE '+ dbName +'.a (id BIGSERIAL PRIMARY KEY, text text);'
-   ];
-
-   Pg.connect(connectionString, function (err, client, done) {
-      if (err) {
-         return cb(err);
-      }
-
-      commands.reduce(function (acc, c) {
-         return acc.then(function () {
-            return Q.nbind(client.query, client)(c);
-         });
-      }, Q())
-      .then(function () {
-         done();
-         cb();
-      });
-   });
-};
-
-var getA = function () {
-   var deferred = Q.defer();
-
-   Pg.connect(connectionString, function (err, client, done) {
-      if (err) {
-         return deferred.reject(err);
-      }
-
-      client.query('SELECT * FROM a', function (err, data) {
-         if (err) {
-            return deferred.reject(err);
-         }
-         deferred.resolve(data);
-      });
-   });
-
-   return deferred.promise;
-};
+var setUpDb = require('./helper').setUpDb;
+var getA = require('./helper').getA;
+var newTiny = require('./helper').newTiny;
+var dbName = require('./helper').dbName;
 
 describe('Transactions', function () {
    var tiny;
@@ -59,10 +16,7 @@ describe('Transactions', function () {
             return done(err);
          }
 
-         tiny = new Tiny({
-            connectionString: connectionString,
-            rootDir: __dirname + '/sql/'
-         });
+         tiny = newTiny();
 
          done();
       });
@@ -106,7 +60,7 @@ describe('Transactions', function () {
    describe('Raw queries', function () {
       it('should commit successful transactions', function (done) {
          tiny.transaction(function (ctx) {
-            return ctx.query('INSERT INTO a (text) VALUES (:text)', {
+            return ctx.query('INSERT INTO ' + dbName + '.a (text) VALUES (:text)', {
                text: 'TEST'
             });
          })
@@ -120,7 +74,7 @@ describe('Transactions', function () {
 
       it('should rollback failed transactions', function (done) {
          tiny.transaction(function (ctx) {
-            return ctx.query('INSERT INTO a (text) VALUES (:text)', {
+            return ctx.query('INSERT INTO ' + dbName + '.a (text) VALUES (:text)', {
                text: 'TEST'
             })
             .then(function () {

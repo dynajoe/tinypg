@@ -47,3 +47,33 @@ WHERE bar.a = :a
    AND foo.something = :c;
 ```
 This example requires that there be a folder relative to the current file called sql_files with a file named `fetch_user_by_email.sql`. Subdirectories are represented as nested objects on the `sql` root object.
+
+### Transactions
+
+The `.transaction` method provides a context that ensures every command executed against that
+context will be run in the same transaction. Nested transactions are supported (which really just means
+that COMMIT/ROLLBACK will be left up to the outermost transaction).
+
+If you do not use the provided context, those queries cannot be guaranteed to use the same transaction.
+
+```javascript
+   var t = new Tiny({
+      connection_string: "postgres://joe@localhost:5432/mydb",
+      root_dir: './sql_files',
+      snake: true // camel: true is default
+   });
+
+   t.transaction(function (ctx) {
+      return ctx.query('INSERT INTO ' + dbName + '.a (text) VALUES (:text)', {
+         text: '1'
+      })
+      .then(function (res) {
+         return ctx.transaction(function (ctx2) {
+            return ctx2.query('INSERT INTO ' + dbName + '.a (text) VALUES (:text)', {
+               text: '2'
+            });
+         });
+      });
+   })
+
+```

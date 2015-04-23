@@ -1,4 +1,4 @@
-var Tiny = require('../src/index')
+var Tiny = require('../src/index');
 var Q = require('q');
 var Pg = require('pg');
 var expect = require('chai').expect;
@@ -32,8 +32,8 @@ describe('Select', function () {
       it('should return the postgres modules result', function (done) {
          tiny.sql.a.select()
          .then(function (res) {
-            expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }, { id: 2, text: 'b' }, { id: 3, text: 'c' }])
-            done()
+            expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }, { id: 2, text: 'b' }, { id: 3, text: 'c' }]);
+            done();
          })
          .catch(done);
       });
@@ -43,8 +43,8 @@ describe('Select', function () {
       it('should return the postgres modules result', function (done) {
          tiny.query('SELECT * FROM ' + dbName + '.a')
          .then(function (res) {
-            expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }, { id: 2, text: 'b' }, { id: 3, text: 'c' }])
-            done()
+            expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }, { id: 2, text: 'b' }, { id: 3, text: 'c' }]);
+            done();
          })
          .catch(done);
       });

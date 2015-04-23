@@ -1,4 +1,4 @@
-var Tiny = require('../src/index')
+var Tiny = require('../src/index');
 var Q = require('q');
 var Pg = require('pg');
 var expect = require('chai').expect;
@@ -34,7 +34,7 @@ describe('Transactions', function () {
          .then(function (err) {
             getA().then(function (res) {
                expect(res.rows).to.have.length(3);
-               done()
+               done();
             });
          });
       });
@@ -45,8 +45,8 @@ describe('Transactions', function () {
                text: 'TEST'
             })
             .then(function () {
-               throw new Error('THIS SHOULD ABORT')
-            })
+               throw new Error('THIS SHOULD ABORT');
+            });
          })
          .catch(function (err) {
             getA().then(function (res) {
@@ -55,6 +55,7 @@ describe('Transactions', function () {
             });
          });
       });
+
    });
 
    describe('Raw queries', function () {
@@ -78,8 +79,8 @@ describe('Transactions', function () {
                text: 'TEST'
             })
             .then(function () {
-               throw new Error('THIS SHOULD ABORT')
-            })
+               throw new Error('THIS SHOULD ABORT');
+            });
          })
          .catch(function (err) {
             getA().then(function (res) {
@@ -88,6 +89,56 @@ describe('Transactions', function () {
             });
          });
       });
+   });
 
+   describe('Nested Transactions', function () {
+
+      it('should commit successful transactions', function (done) {
+         tiny.transaction(function (ctx) {
+            return ctx.query('INSERT INTO ' + dbName + '.a (text) VALUES (:text)', {
+               text: '1'
+            })
+            .then(function (res) {
+               return ctx.transaction(function (ctx2) {
+                  return ctx2.query('INSERT INTO ' + dbName + '.a (text) VALUES (:text)', {
+                     text: '2'
+                  });
+               });
+            });
+         })
+         .then(function (err) {
+            return getA().then(function (res) {
+               expect(res.rows).to.have.length(2);
+               done();
+            });
+         })
+         .catch(function (err) {
+            done(err);
+         });
+      });
+
+      it('should rollback on a failed inner transaction', function (done) {
+         tiny.transaction(function (ctx) {
+            return ctx.query('INSERT INTO ' + dbName + '.a (text) VALUES (:text)', {
+               text: '1'
+            })
+            .then(function (res) {
+               return ctx.transaction(function (ctx2) {
+                  return ctx2.query('INSERT INTO ' + dbName + '.a (text) VALUES (:text)', {
+                     text: '2'
+                  })
+                  .then(function () {
+                     throw new Error('THIS SHOULD ABORT');
+                  });
+               });
+            });
+         })
+         .catch(function (err) {
+            return getA().then(function (res) {
+               expect(res.rows).to.have.length(0);
+               done();
+            });
+         });
+      });
    });
 });

@@ -65,6 +65,15 @@ var setProperty = function (obj, path, value, transformPath) {
    }
 };
 
+var assertPromise = function (result) {
+   if (Q.isPromiseAlike(result)) {
+      return result;
+   }
+   else {
+      throw new Error('Expected transaction function to return a promise.');
+   }
+};
+
 var Tiny = function (options) {
    this.pg = Pg;
 
@@ -133,6 +142,9 @@ Tiny.prototype.transaction = function (txFn) {
       // Create a new version of this instance of Tiny
       // with getClient overridden to provide same client
       var tinyOverride = _.create(_this, {
+         transaction: function(txFn) {
+            return assertPromise(txFn(tinyOverride));
+         },
          getClient: Q.fbind(function () {
             if (txDone) {
                throw new Error('Transaction has already completed for this client!');
@@ -149,14 +161,7 @@ Tiny.prototype.transaction = function (txFn) {
       // This really sucks, expensive operation
       setSql(tinyOverride);
 
-      var txFnResult = txFn(tinyOverride);
-
-      if (Q.isPromiseAlike(txFnResult)) {
-         return txFnResult;
-      }
-      else {
-         throw new Error('Expected transaction function to return a promise.');
-      }
+      return assertPromise(txFn(tinyOverride));
    })
    .then(function (result) {
       return clientQuery('COMMIT')

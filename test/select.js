@@ -50,6 +50,20 @@ describe('Select', function () {
             .catch(done);
          });
       })
+
+      describe.only('that perform multiple formats', function () {
+         it('should perform the replacements', function (done) {
+            tiny.sql.a.testMultiFormat
+            .format('a WHERE text = %L')
+            .format('a')
+            .query()
+            .then(function (res) {
+               expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }]);
+               done();
+            })
+            .catch(done);
+         });
+      })
    });
 
    describe('Raw queries', function () {

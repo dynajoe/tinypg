@@ -51,16 +51,32 @@ var createDbCallFn = function (getClient, config) {
    fn.text = config.text;
    fn.transformed = config.transformed;
 
-   fn.format = function () {
-      var args = [config.text].concat(Array.prototype.slice.call(arguments,0));
-      var result = PgFormat.apply(PgFormat, args);
+   var formatFn = function (config) {
+      return function () {
+         var args = [config.text].concat(Array.prototype.slice.call(arguments, 0));
+         var result = PgFormat.apply(PgFormat, args);
+         var parsed = Parser.parseSql(result);
 
-      return {
-         query: createDbCallFn(getClient, _.extend({}, config, Parser.parseSql(result)))
+         var newConfig = _.extend({}, config, {
+            text: result,
+            transformed: parsed.transformed,
+            mapping: parsed.mapping
+         });
+
+         return {
+            format: formatFn(newConfig),
+            query: createDbCallFn(getClient, newConfig)
+         };
       };
    };
 
+   fn.format = formatFn(config);
+
    return fn;
+};
+
+var format = function () {
+
 };
 
 var setProperty = function (obj, path, value, transformPath) {

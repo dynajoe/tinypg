@@ -10,13 +10,17 @@ var getA = function () {
 
    Pg.connect(connectionString, function (err, client, done) {
       if (err) {
+         done();
          return deferred.reject(err);
       }
 
       client.query('SELECT * FROM a', function (err, data) {
+         done();
+
          if (err) {
             return deferred.reject(err);
          }
+
          deferred.resolve(data);
       });
    });
@@ -29,10 +33,13 @@ var insertA = function (text) {
 
    Pg.connect(connectionString, function (err, client, done) {
       if (err) {
+         done();
          return deferred.reject(err);
       }
 
       client.query('INSERT INTO ' + dbName + '.a (text) VALUES ($1)', [text], function (err, data) {
+         done();
+
          if (err) {
             return deferred.reject(err);
          }
@@ -46,6 +53,7 @@ var insertA = function (text) {
 
 var setUpDb = function (cb) {
    var commands = [
+      'ROLLBACK',
       'DROP SCHEMA IF EXISTS ' + dbName + ' cascade ',
       'SET search_path TO ' + dbName,
       'CREATE SCHEMA ' + dbName,
@@ -54,6 +62,7 @@ var setUpDb = function (cb) {
 
    Pg.connect(connectionString, function (err, client, done) {
       if (err) {
+         done();
          return cb(err);
       }
 
@@ -65,6 +74,10 @@ var setUpDb = function (cb) {
       .then(function () {
          done();
          cb();
+      })
+      .catch(function (err) {
+         done();
+         cb(err);
       });
    });
 };

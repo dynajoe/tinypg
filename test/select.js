@@ -37,6 +37,19 @@ describe('Select', function () {
          })
          .catch(done);
       });
+
+      describe('that have format parameters', function () {
+         it('should perform the replacements', function (done) {
+            tiny.sql.a.testFormat.format('a').query({
+               a: 'a'
+            })
+            .then(function (res) {
+               expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }]);
+               done();
+            })
+            .catch(done);
+         });
+      })
    });
 
    describe('Raw queries', function () {

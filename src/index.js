@@ -6,6 +6,7 @@ var Path = require('path');
 var Case = require('case');
 var Parser = require('./parser');
 var _ = require('underscore');
+var PgFormat = require('pg-format');
 
 var setSql = function (db) {
    var transformPath = (db.options.snake ? Case.snake : Case.camel).bind(Case);
@@ -41,11 +42,25 @@ var dbCall = function (clientCtx, config) {
 };
 
 var createDbCallFn = function (getClient, config) {
-   return function (params) {
+   var fn = function (params) {
       return getClient().then(function (clientCtx) {
          return dbCall(clientCtx, config)(params);
       });
    };
+
+   fn.text = config.text;
+   fn.transformed = config.transformed;
+
+   fn.format = function () {
+      var args = [config.text].concat(Array.prototype.slice.call(arguments,0));
+      var result = PgFormat.apply(PgFormat, args);
+
+      return {
+         query: createDbCallFn(getClient, _.extend({}, config, Parser.parseSql(result)))
+      };
+   };
+
+   return fn;
 };
 
 var setProperty = function (obj, path, value, transformPath) {
@@ -85,6 +100,7 @@ var Tiny = function (options) {
 
    this.callConfigs = Parser.parseFiles(this.options.rootDir);
    this.connect = Q.nbind(Pg.connect, Pg);
+   this.format = PgFormat;
 
    setSql(this);
 };

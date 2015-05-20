@@ -58,10 +58,12 @@ var parseFiles = function (rootDir) {
 
    for (var i = 0; i < files.length; i++) {
       var f = files[i];
+      var relative_path = f.substring(root.length);
 
       var data = {
+         name: relative_path.replace(/\W/ig, '_').replace('_', ''),
          path: f,
-         relative_path: f.substring(root.length),
+         relative_path: relative_path,
          text: Fs.readFileSync(f).toString()
       };
 

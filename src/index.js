@@ -15,6 +15,8 @@ var setSql = function (db) {
       var config = db.callConfigs[x];
       var p = Path.parse(config.relative_path);
       var key = p.dir.split(Path.sep).concat(p.name).slice(1);
+      config.prepared = db.options.prepared;
+
       var callFn = createDbCallFn(db.getClient.bind(db), config);
 
       Util.setProperty(sqlObj, key, callFn, transformPath);
@@ -30,10 +32,25 @@ var dbCall = function (clientCtx, config) {
       });
 
       var deferred = Q.defer();
+      var name = config.name + '_' + Util.hashCode(config.transformed).toString().replace('-', 'n');
+      var params;
 
-      clientCtx.client.query(config.transformed, values, function (err, data) {
+      if (config.prepared) {
+         params = [{
+            name: name,
+            text: config.transformed,
+            values: values
+         }]
+      } else {
+         params = [
+            config.transformed,
+            values
+         ]
+      }
+
+      clientCtx.client.query.apply(clientCtx.client, params.concat(function (err, data) {
          err ? deferred.reject(err) : deferred.resolve(data);
-      });
+      }));
 
       return deferred.promise;
    };

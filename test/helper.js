@@ -1,6 +1,7 @@
 var Tiny = require('../src/index')
 var Q = require('q');
 var Pg = require('pg');
+var _ = require('underscore');
 
 var connectionString = 'postgres://joe@localhost:5432/';
 var dbSchema = module.exports.dbSchema = 'tiny_test_db';
@@ -63,9 +64,9 @@ module.exports.setUpDb = function () {
    }, Q());
 };
 
-module.exports.newTiny = function () {
-   return new Tiny({
+module.exports.newTiny = function (options) {
+   return new Tiny(_.extend({
       connectionString: connectionString,
       rootDir: __dirname + '/sql/'
-   });
+   }, options));
 };

@@ -2,10 +2,12 @@ var Tiny = require('../src/index')
 var Q = require('q');
 var Pg = require('pg');
 
-var dbName = 'tiny_test_db';
 var connectionString = 'postgres://joe@localhost:5432/';
+var dbSchema = module.exports.dbSchema = 'tiny_test_db';
 
-var getA = function () {
+var dbQuery = module.exports.dbQuery = function () {
+   var args = Array.prototype.slice.call(arguments, 0)
+   args[0] = args[0].replace(/\{dbSchema\}/ig, dbSchema);
    var deferred = Q.defer();
 
    Pg.connect(connectionString, function (err, client, done) {
@@ -14,85 +16,56 @@ var getA = function () {
          return deferred.reject(err);
       }
 
-      client.query('SELECT * FROM a', function (err, data) {
-         done();
-
-         if (err) {
-            return deferred.reject(err);
-         }
-
-         deferred.resolve(data);
+      deferred.resolve({
+         client: client,
+         done: done
       });
    });
 
-   return deferred.promise;
-};
+   return deferred.promise.then(function (c) {
+      var qDefer = Q.defer();
 
-var insertA = function (text) {
-   var deferred = Q.defer();
-
-   Pg.connect(connectionString, function (err, client, done) {
-      if (err) {
-         done();
-         return deferred.reject(err);
-      }
-
-      client.query('INSERT INTO ' + dbName + '.a (text) VALUES ($1)', [text], function (err, data) {
-         done();
+      c.client.query.apply(c.client, args.concat(function (err, data) {
+         c.done();
 
          if (err) {
-            return deferred.reject(err);
+            qDefer.reject(err);
+         } else {
+            qDefer.resolve(data);
          }
+      }));
 
-         deferred.resolve(data);
-      });
+      return qDefer.promise;
    });
-
-   return deferred.promise;
 };
 
-var setUpDb = function (cb) {
+module.exports.getA = function () {
+   return dbQuery('SELECT * FROM {dbSchema}.a');
+};
+
+module.exports.insertA = function (text) {
+   return dbQuery('INSERT INTO {dbSchema}.a (text) VALUES ($1)', [text]);
+};
+
+module.exports.setUpDb = function () {
    var commands = [
-      'ROLLBACK',
-      'DROP SCHEMA IF EXISTS ' + dbName + ' cascade ',
-      'SET search_path TO ' + dbName,
-      'CREATE SCHEMA ' + dbName,
-      'CREATE TABLE '+ dbName +'.a (id serial PRIMARY KEY, text text);'
+      'ROLLBACK;',
+      'DROP SCHEMA IF EXISTS {dbSchema} CASCADE;',
+      'CREATE SCHEMA {dbSchema};',
+      'SET search_path TO {dbSchema};',
+      'CREATE TABLE {dbSchema}.a (id serial PRIMARY KEY, text text);'
    ];
 
-   Pg.connect(connectionString, function (err, client, done) {
-      if (err) {
-         done();
-         return cb(err);
-      }
-
-      commands.reduce(function (acc, c) {
-         return acc.then(function () {
-            return Q.nbind(client.query, client)(c);
-         });
-      }, Q())
-      .then(function () {
-         done();
-         cb();
-      })
-      .catch(function (err) {
-         done();
-         cb(err);
+   return commands.reduce(function (acc, c) {
+      return acc.then(function () {
+         return dbQuery(c);
       });
-   });
+   }, Q());
 };
 
-var newTiny = function () {
+module.exports.newTiny = function () {
    return new Tiny({
       connectionString: connectionString,
       rootDir: __dirname + '/sql/'
    });
-};
-
-module.exports = {
-   dbName: dbName,
-   setUpDb: setUpDb,
-   insertA: insertA,
-   getA: getA,
-   newTiny: newTiny
 };

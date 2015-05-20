@@ -5,26 +5,21 @@ var expect = require('chai').expect;
 var setUpDb = require('./helper').setUpDb;
 var getA = require('./helper').getA;
 var newTiny = require('./helper').newTiny;
-var dbName = require('./helper').dbName;
+var dbSchema = require('./helper').dbSchema;
 
 describe('Transactions', function () {
    var tiny;
 
-   beforeEach(function (done) {
-      setUpDb(function (err) {
-         if (err) {
-            return done(err);
-         }
-
+   beforeEach(function () {
+      return setUpDb()
+      .then(function () {
          tiny = newTiny();
-
-         done();
       });
    });
 
    describe('Sql file queries', function () {
-      it('should commit successful transactions', function (done) {
-         tiny.transaction(function (ctx) {
+      it('should commit successful transactions', function () {
+         return tiny.transaction(function (ctx) {
             var queries = [1, 2, 3].map(function (v) {
                return ctx.sql.a.insert({ text: v.toString() });
             });
@@ -32,15 +27,14 @@ describe('Transactions', function () {
             return Q.all(queries);
          })
          .then(function (err) {
-            getA().then(function (res) {
+            return getA().then(function (res) {
                expect(res.rows).to.have.length(3);
-               done();
             });
          });
       });
 
-      it('should rollback failed transactions', function (done) {
-         tiny.transaction(function (ctx) {
+      it('should rollback failed transactions', function () {
+         return tiny.transaction(function (ctx) {
             return ctx.sql.a.insert({
                text: 'TEST'
             })
@@ -49,33 +43,30 @@ describe('Transactions', function () {
             });
          })
          .catch(function (err) {
-            getA().then(function (res) {
+            return getA().then(function (res) {
                expect(res.rows).to.have.length(0);
-               done();
             });
          });
       });
-
    });
 
    describe('Raw queries', function () {
-      it('should commit successful transactions', function (done) {
-         tiny.transaction(function (ctx) {
-            return ctx.query('INSERT INTO ' + dbName + '.a (text) VALUES (:text)', {
+      it('should commit successful transactions', function () {
+         return tiny.transaction(function (ctx) {
+            return ctx.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
                text: 'TEST'
             });
          })
          .then(function (err) {
-            getA().then(function (res) {
+            return getA().then(function (res) {
                expect(res.rows).to.have.length(1);
-               done();
             });
          });
       });
 
-      it('should rollback failed transactions', function (done) {
-         tiny.transaction(function (ctx) {
-            return ctx.query('INSERT INTO ' + dbName + '.a (text) VALUES (:text)', {
+      it('should rollback failed transactions', function () {
+         return tiny.transaction(function (ctx) {
+            return ctx.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
                text: 'TEST'
             })
             .then(function () {
@@ -83,24 +74,22 @@ describe('Transactions', function () {
             });
          })
          .catch(function (err) {
-            getA().then(function (res) {
+            return getA().then(function (res) {
                expect(res.rows).to.have.length(0);
-               done();
             });
          });
       });
    });
 
    describe('Nested Transactions', function () {
-
-      it('should commit successful transactions', function (done) {
-         tiny.transaction(function (ctx) {
-            return ctx.query('INSERT INTO ' + dbName + '.a (text) VALUES (:text)', {
+      it('should commit successful transactions', function () {
+         return tiny.transaction(function (ctx) {
+            return ctx.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
                text: '1'
             })
             .then(function (res) {
                return ctx.transaction(function (ctx2) {
-                  return ctx2.query('INSERT INTO ' + dbName + '.a (text) VALUES (:text)', {
+                  return ctx2.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
                      text: '2'
                   });
                });
@@ -109,22 +98,18 @@ describe('Transactions', function () {
          .then(function (err) {
             return getA().then(function (res) {
                expect(res.rows).to.have.length(2);
-               done();
             });
          })
-         .catch(function (err) {
-            done(err);
-         });
       });
 
-      it('should rollback on a failed inner transaction', function (done) {
-         tiny.transaction(function (ctx) {
-            return ctx.query('INSERT INTO ' + dbName + '.a (text) VALUES (:text)', {
+      it('should rollback on a failed inner transaction', function () {
+         return tiny.transaction(function (ctx) {
+            return ctx.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
                text: '1'
             })
             .then(function (res) {
                return ctx.transaction(function (ctx2) {
-                  return ctx2.query('INSERT INTO ' + dbName + '.a (text) VALUES (:text)', {
+                  return ctx2.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
                      text: '2'
                   })
                   .then(function () {
@@ -136,7 +121,6 @@ describe('Transactions', function () {
          .catch(function (err) {
             return getA().then(function (res) {
                expect(res.rows).to.have.length(0);
-               done();
             });
          });
       });

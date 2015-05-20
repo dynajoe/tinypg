@@ -1,1 +1,2 @@
-SELECT * FROM %s
+SELECT * FROM
+%s

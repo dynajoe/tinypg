@@ -5,75 +5,75 @@ var expect = require('chai').expect;
 var setUpDb = require('./helper').setUpDb;
 var insertA = require('./helper').insertA;
 var newTiny = require('./helper').newTiny;
-var dbName = require('./helper').dbName;
+var dbSchema = require('./helper').dbSchema;
 
 describe('Select', function () {
    var tiny;
 
-   beforeEach(function (done) {
-      setUpDb(function (err) {
-         if (err) {
-            return done(err);
-         }
-
+   beforeEach(function () {
+      return setUpDb()
+      .then(function () {
          tiny = newTiny();
-
-         Q.all(['a', 'b', 'c'].reduce(function (acc, v) {
-            return acc.then(insertA.bind(null, v));
-         }, Q()))
-         .then(function (res) {
-            done();
-         })
-         .catch(done);
+         return Q.all(['a', 'b', 'c'].reduce(function (acc, v) {
+            return acc.then(function () {
+               return insertA(v);
+            });
+         }, Q()));
       });
    });
 
    describe('Sql file queries', function () {
-      it('should return the postgres modules result', function (done) {
-         tiny.sql.a.select()
+      it('should return the postgres modules result', function () {
+         return tiny.sql.a.select()
          .then(function (res) {
             expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }, { id: 2, text: 'b' }, { id: 3, text: 'c' }]);
-            done();
-         })
-         .catch(done);
+         });
       });
 
       describe('that have format parameters', function () {
-         it('should perform the replacements', function (done) {
-            tiny.sql.a.testFormat.format('a').query({
+         it('should perform the replacements', function () {
+            return tiny.sql.a.testFormat.format('a').query({
                a: 'a'
             })
             .then(function (res) {
                expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }]);
-               done();
-            })
-            .catch(done);
+            });
          });
-      })
+      });
 
-      describe.only('that perform multiple formats', function () {
-         it('should perform the replacements', function (done) {
-            tiny.sql.a.testMultiFormat
+      describe('that have format parameters that inject variables', function () {
+         it('should perform the replacements', function () {
+            return tiny.sql.a.testMultiFormat
+            .format('a WHERE text = :a OR text = :b')
+            .query({
+               a: 'a',
+               b: 'b'
+            })
+            .then(function (res) {
+               expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }, { id: 2, text: 'b' }]);
+            });
+         });
+      });
+
+      describe('that perform multiple formats', function () {
+         it('should perform the replacements', function () {
+            return tiny.sql.a.testMultiFormat
             .format('a WHERE text = %L')
             .format('a')
             .query()
             .then(function (res) {
                expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }]);
-               done();
-            })
-            .catch(done);
+            });
          });
       })
    });
 
    describe('Raw queries', function () {
-      it('should return the postgres modules result', function (done) {
-         tiny.query('SELECT * FROM ' + dbName + '.a')
+      it('should return the postgres modules result', function () {
+         return tiny.query('SELECT * FROM ' + dbSchema + '.a')
          .then(function (res) {
             expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }, { id: 2, text: 'b' }, { id: 3, text: 'c' }]);
-            done();
-         })
-         .catch(done);
+         });
       });
    });
 });

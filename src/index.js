@@ -33,7 +33,6 @@ var dbCall = function (clientCtx, config) {
       var deferred = Q.defer();
 
       clientCtx.client.query(config.transformed, values, function (err, data) {
-         clientCtx.done();
          err ? deferred.reject(err) : deferred.resolve(data);
       });
 
@@ -73,10 +72,6 @@ var createDbCallFn = function (getClient, config) {
    fn.format = formatFn(config);
 
    return fn;
-};
-
-var format = function () {
-
 };
 
 var setProperty = function (obj, path, value, transformPath) {
@@ -142,9 +137,10 @@ Tiny.prototype.query = function (query, params) {
       clientDone = clientCtx.done;
       return dbCall(clientCtx, parsedSql)(params);
    })
-   .then(function (res) {
-      clientDone();
-      return res;
+   .fin(function () {
+      if (clientDone) {
+         clientDone();
+      }
    });
 };
 
@@ -190,7 +186,6 @@ Tiny.prototype.transaction = function (txFn) {
          })
       });
 
-      // This really sucks, expensive operation
       setSql(tinyOverride);
 
       return assertPromise(txFn(tinyOverride));

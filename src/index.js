@@ -1,12 +1,11 @@
 var Pg = require('pg');
 var Q = require('q');
-var Glob = require('glob');
-var Fs = require('fs');
 var Path = require('path');
 var Case = require('case');
 var Parser = require('./parser');
 var _ = require('underscore');
 var PgFormat = require('pg-format');
+var Util = require('./util');
 
 var setSql = function (db) {
    var transformPath = (db.options.snake ? Case.snake : Case.camel).bind(Case);
@@ -18,7 +17,7 @@ var setSql = function (db) {
       var key = p.dir.split(Path.sep).concat(p.name).slice(1);
       var callFn = createDbCallFn(db.getClient.bind(db), config);
 
-      setProperty(sqlObj, key, callFn, transformPath);
+      Util.setProperty(sqlObj, key, callFn, transformPath);
    }
 
    db.sql = sqlObj;
@@ -40,64 +39,41 @@ var dbCall = function (clientCtx, config) {
    };
 };
 
+var formatFn = function (config, getClient) {
+   return function () {
+      var args = [config.text].concat(Array.prototype.slice.call(arguments, 0));
+      var result = PgFormat.apply(PgFormat, args);
+      var parsed = Parser.parseSql(result);
+
+      var newConfig = _.extend({}, config, {
+         text: result,
+         transformed: parsed.transformed,
+         mapping: parsed.mapping
+      });
+
+      return {
+         format: formatFn(newConfig, getClient),
+         query: createDbCallFn(getClient, newConfig)
+      };
+   };
+};
+
 var createDbCallFn = function (getClient, config) {
    var fn = function (params) {
-      return getClient().then(function (clientCtx) {
-         return dbCall(clientCtx, config)(params);
+      return getClient()
+      .then(function (clientCtx) {
+         return dbCall(clientCtx, config)(params)
+         .fin(function () {
+            clientCtx.done();
+         });
       });
    };
 
    fn.text = config.text;
    fn.transformed = config.transformed;
-
-   var formatFn = function (config) {
-      return function () {
-         var args = [config.text].concat(Array.prototype.slice.call(arguments, 0));
-         var result = PgFormat.apply(PgFormat, args);
-         var parsed = Parser.parseSql(result);
-
-         var newConfig = _.extend({}, config, {
-            text: result,
-            transformed: parsed.transformed,
-            mapping: parsed.mapping
-         });
-
-         return {
-            format: formatFn(newConfig),
-            query: createDbCallFn(getClient, newConfig)
-         };
-      };
-   };
-
-   fn.format = formatFn(config);
+   fn.format = formatFn(config, getClient);
 
    return fn;
-};
-
-var setProperty = function (obj, path, value, transformPath) {
-   if (path[0] == null || path[0].trim() == '') {
-      return setProperty(obj, path.slice(1), value, transformPath);
-   }
-
-   var pathPart = transformPath(path[0]);
-
-   if (path.length > 1) {
-      obj[pathPart] = obj[pathPart] || {};
-      return setProperty(obj[pathPart], path.slice(1), value, transformPath);
-   }
-   else {
-      obj[pathPart] = value;
-      return obj;
-   }
-};
-
-var assertPromise = function (result) {
-   if (Q.isPromiseAlike(result)) {
-      return result;
-   }
-   else {
-      throw new Error('Expected transaction function to return a promise.');
-   }
 };
 
 var Tiny = function (options) {
@@ -130,17 +106,13 @@ Tiny.pgDefaults = function (obj) {
 // Instance
 Tiny.prototype.query = function (query, params) {
    var parsedSql = Parser.parseSql(query);
-   var clientDone;
 
    return this.getClient()
    .then(function (clientCtx) {
-      clientDone = clientCtx.done;
-      return dbCall(clientCtx, parsedSql)(params);
-   })
-   .fin(function () {
-      if (clientDone) {
-         clientDone();
-      }
+      return dbCall(clientCtx, parsedSql)(params)
+      .fin(function () {
+         clientCtx.done();
+      });
    });
 };
 
@@ -171,7 +143,7 @@ Tiny.prototype.transaction = function (txFn) {
       // with getClient overridden to provide same client
       var tinyOverride = _.create(_this, {
          transaction: function(txFn) {
-            return assertPromise(txFn(tinyOverride));
+            return Util.assertPromise(txFn(tinyOverride));
          },
          getClient: Q.fbind(function () {
             if (txDone) {
@@ -188,7 +160,7 @@ Tiny.prototype.transaction = function (txFn) {
 
       setSql(tinyOverride);
 
-      return assertPromise(txFn(tinyOverride));
+      return Util.assertPromise(txFn(tinyOverride));
    })
    .then(function (result) {
       return clientQuery('COMMIT')

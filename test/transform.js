@@ -1,5 +1,5 @@
 var Parser = require('../src/parser');
-var Expect = require('chai').expect;
+var expect = require('chai').expect;
 
 describe('transform', function () {
    var ctx;
@@ -10,11 +10,11 @@ describe('transform', function () {
    });
 
    it('should replace the detected variables with postgres variable indexes', function () {
-      Expect(ctx.parsed.transformed).to.equal('SELECT * FROM users where id = $1 and name = $2')
+      expect(ctx.parsed.transformed).to.equal('SELECT * FROM users where id = $1 and name = $2')
    });
 
    it('should return the mapping of postgres vars to names', function () {
-      Expect(ctx.parsed.mapping).to.deep.equal([
+      expect(ctx.parsed.mapping).to.deep.equal([
          { name: 'id', index: 1 },
          { name: 'name', index: 2 }
       ])
@@ -27,11 +27,11 @@ describe('transform', function () {
       });
 
       it('should replace the detected variables with postgres variable indexes', function () {
-         Expect(ctx.parsed.transformed).to.equal('SELECT * FROM users where id = $1::int and name = $2::text')
+         expect(ctx.parsed.transformed).to.equal('SELECT * FROM users where id = $1::int and name = $2::text')
       });
 
       it('should return the mapping of postgres vars to names', function () {
-         Expect(ctx.parsed.mapping).to.deep.equal([
+         expect(ctx.parsed.mapping).to.deep.equal([
             { name: 'id', index: 1 },
             { name: 'name', index: 2 }
          ])

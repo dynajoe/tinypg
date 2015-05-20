@@ -1,0 +1,106 @@
+0 info it worked if it ends with ok
+1 verbose cli [ 'node', '/usr/local/bin/npm', 'publish' ]
+2 info using npm@2.7.5
+3 info using node@v0.12.2
+4 verbose node symlink /usr/local/bin/node
+5 verbose publish [ '.' ]
+6 silly cache add args [ '.', null ]
+7 verbose cache add spec .
+8 silly cache add parsed spec { raw: '.',
+8 silly cache add   scope: null,
+8 silly cache add   name: null,
+8 silly cache add   rawSpec: '.',
+8 silly cache add   spec: '/Users/joe/code/tiny',
+8 silly cache add   type: 'directory' }
+9 verbose addLocalDirectory /Users/joe/.npm/tinypg/0.0.14/package.tgz not in flight; packing
+10 verbose tar pack [ '/Users/joe/.npm/tinypg/0.0.14/package.tgz',
+10 verbose tar pack   '/Users/joe/code/tiny' ]
+11 verbose tarball /Users/joe/.npm/tinypg/0.0.14/package.tgz
+12 verbose folder /Users/joe/code/tiny
+13 info prepublish tinypg@0.0.14
+14 verbose addLocalTarball adding from inside cache /Users/joe/.npm/tinypg/0.0.14/package.tgz
+15 silly cache afterAdd tinypg@0.0.14
+16 verbose afterAdd /Users/joe/.npm/tinypg/0.0.14/package/package.json not in flight; writing
+17 verbose afterAdd /Users/joe/.npm/tinypg/0.0.14/package/package.json written
+18 silly publish { name: 'tinypg',
+18 silly publish   version: '0.0.14',
+18 silly publish   description: 'Easy way to call sql files using postgres.',
+18 silly publish   main: 'index.js',
+18 silly publish   scripts: { test: 'echo "Error: no test specified" && exit 1' },
+18 silly publish   repository:
+18 silly publish    { type: 'git',
+18 silly publish      url: 'http://github.com/joeandaverde/tinypg.git' },
+18 silly publish   homepage: 'http://github.com/joeandaverde/tinypg',
+18 silly publish   author: { name: 'Joe Andaverde' },
+18 silly publish   keywords: [ 'postgres', 'sql', 'db', 'query' ],
+18 silly publish   license: 'MIT',
+18 silly publish   dependencies:
+18 silly publish    { case: '^1.2.1',
+18 silly publish      glob: '^5.0.3',
+18 silly publish      'gulp-mocha': '^2.0.1',
+18 silly publish      mocha: '^2.2.4',
+18 silly publish      pg: '^4.3.0',
+18 silly publish      'pg-format': '^0.1.4',
+18 silly publish      'pg-transact': '^1.0.1',
+18 silly publish      psql: '0.0.1',
+18 silly publish      q: '^1.2.0',
+18 silly publish      underscore: '^1.8.3' },
+18 silly publish   devDependencies:
+18 silly publish    { chai: '^2.2.0',
+18 silly publish      mocha: '^2.2.4',
+18 silly publish      'mocha-notifier-reporter': '^0.1.1' },
+18 silly publish   readme: '# TinyPg\r\n\r\nI liked [MassiveJS](https://github.com/robconery/massive-js) but wanted less. This module allows for one to load SQL files from disk and execute using [node-postgres](https://github.com/brianc/node-postgres). It also allows for specifying arguments to SQL files using property names.\r\n\r\n## Disclaimer\r\nI created this project to use for my special case. It probably won\'t work for yours. It also is not very resilient to malformed SQL or variable names that don\'t match a very simple regex. I don\'t recommend using this module.\r\n\r\n## Usage\r\n\r\n```javascript\r\n// assumes file system\r\n// ./sql_files\r\n//     fetch_user_by_name.sql\r\n//     subdir_name/\r\n//         fetch_foo.sql\r\nvar Tiny = require(\'tinypg\');\r\n\r\nvar t = new Tiny({\r\n   connection_string: "postgres://joe@localhost:5432/mydb",\r\n   root_dir: \'./sql_files\',\r\n   snake: true // camel: true is default\r\n});\r\n\r\n// Example 1\r\nt.sql.fetch_user_by_name({ name: \'Joe\' })\r\n.then(function () { })\r\n.fail(function () { });\r\n\r\n// Example of file in a sub directory\r\nt.sql.subdir_name.fetch_foo({ a: 1, b: 2, c: \'foo\' })\r\n.then(function () { })\r\n.fail(function () { });\r\n```\r\n\r\nfetch_user_by_email.sql\r\n```sql\r\nSELECT * FROM user WHERE name = :name;\r\n```\r\n\r\nsubdir_name/fetch_foo.sql\r\n```sql\r\nSELECT *\r\nFROM foo\r\n   INNER JOIN bar ON foo.bar_id = bar.id\r\nWHERE bar.a = :a\r\n   AND foo.b = :b\r\n   AND foo.something = :c;\r\n```\r\nThis example requires that there be a folder relative to the current file called sql_files with a file named `fetch_user_by_email.sql`. Subdirectories are represented as nested objects on the `sql` root object.\r\n\r\n### Transactions\r\n\r\nThe `.transaction` method provides a context that ensures every command executed against that\r\ncontext will be run in the same transaction. Nested transactions are supported (which really just means\r\nthat COMMIT/ROLLBACK will be left up to the outermost transaction).\r\n\r\nIf you do not use the provided context, those queries cannot be guaranteed to use the same transaction.\r\n\r\n```javascript\r\n   var t = new Tiny({\r\n      connection_string: "postgres://joe@localhost:5432/mydb",\r\n      root_dir: \'./sql_files\',\r\n      snake: true // camel: true is default\r\n   });\r\n\r\n   t.transaction(function (ctx) {\r\n      return ctx.query(\'INSERT INTO \' + dbName + \'.a (text) VALUES (:text)\', {\r\n         text: \'1\'\r\n      })\r\n      .then(function (res) {\r\n         return ctx.transaction(function (ctx2) {\r\n            return ctx2.query(\'INSERT INTO \' + dbName + \'.a (text) VALUES (:text)\', {\r\n               text: \'2\'\r\n            });\r\n         });\r\n      });\r\n   })\r\n\r\n```',
+18 silly publish   readmeFilename: 'README.md',
+18 silly publish   gitHead: '83e02777f6e544b743cbd1ba2091932e75701776',
+18 silly publish   bugs: { url: 'https://github.com/joeandaverde/tinypg/issues' },
+18 silly publish   _id: 'tinypg@0.0.14',
+18 silly publish   _shasum: '4a7cc01c222f20e55a96f79538f8a54750fe2bbd',
+18 silly publish   _from: '.' }
+19 silly mapToRegistry name tinypg
+20 silly mapToRegistry using default registry
+21 silly mapToRegistry registry https://registry.npmjs.org/
+22 silly mapToRegistry uri https://registry.npmjs.org/tinypg
+23 verbose publish registryBase https://registry.npmjs.org/
+24 silly publish uploading /Users/joe/.npm/tinypg/0.0.14/package.tgz
+25 verbose request uri https://registry.npmjs.org/tinypg
+26 verbose request sending authorization for write operation
+27 info attempt registry request try #1 at 13:31:28
+28 verbose request id 124943a74f60bf8c
+29 http request PUT https://registry.npmjs.org/tinypg
+30 http 403 https://registry.npmjs.org/tinypg
+31 verbose headers { 'content-type': 'application/json',
+31 verbose headers   'cache-control': 'max-age=60',
+31 verbose headers   'content-length': '96',
+31 verbose headers   'accept-ranges': 'bytes',
+31 verbose headers   date: 'Wed, 20 May 2015 18:31:29 GMT',
+31 verbose headers   via: '1.1 varnish',
+31 verbose headers   connection: 'keep-alive',
+31 verbose headers   'x-served-by': 'cache-dfw1834-DFW',
+31 verbose headers   'x-cache': 'MISS',
+31 verbose headers   'x-cache-hits': '0',
+31 verbose headers   'x-timer': 'S1432146688.905009,VS0,VE379' }
+32 verbose request invalidating /Users/joe/.npm/registry.npmjs.org/tinypg on PUT
+33 error publish Failed PUT 403
+34 verbose stack Error: "You cannot publish over the previously published version 0.0.14." : tinypg
+34 verbose stack     at CachingRegistryClient.<anonymous> (/usr/local/lib/node_modules/npm/node_modules/npm-registry-client/lib/request.js:247:14)
+34 verbose stack     at Request._callback (/usr/local/lib/node_modules/npm/node_modules/npm-registry-client/lib/request.js:170:14)
+34 verbose stack     at Request.self.callback (/usr/local/lib/node_modules/npm/node_modules/request/request.js:360:22)
+34 verbose stack     at Request.emit (events.js:110:17)
+34 verbose stack     at Request.<anonymous> (/usr/local/lib/node_modules/npm/node_modules/request/request.js:1202:14)
+34 verbose stack     at Request.emit (events.js:129:20)
+34 verbose stack     at IncomingMessage.<anonymous> (/usr/local/lib/node_modules/npm/node_modules/request/request.js:1150:12)
+34 verbose stack     at IncomingMessage.emit (events.js:129:20)
+34 verbose stack     at _stream_readable.js:908:16
+34 verbose stack     at process._tickCallback (node.js:355:11)
+35 verbose statusCode 403
+36 verbose pkgid tinypg
+37 verbose cwd /Users/joe/code/tiny
+38 error Darwin 14.3.0
+39 error argv "node" "/usr/local/bin/npm" "publish"
+40 error node v0.12.2
+41 error npm  v2.7.5
+42 error code E403
+43 error "You cannot publish over the previously published version 0.0.14." : tinypg
+44 error If you need help, you may report this error at:
+44 error     <https://github.com/npm/npm/issues>
+45 verbose exit [ 1, true ]

@@ -8,15 +8,24 @@ var parseSql = function (sql) {
    var buffer = [];
    var result = [];
    var mapping = [];
+   var keys = {};
    var varIdx = 0;
 
    var pushVar = function () {
-      varIdx++;
-      mapping.push({
-         index: varIdx,
-         name: buffer.join('')
-      });
-      result.push("$" + varIdx);
+      var name = buffer.join('');
+
+      if (keys[name]) {
+         result.push("$" + keys[name].index);
+      } else {
+         varIdx++;
+         keys[name] = {
+            index: varIdx,
+            name: buffer.join('')
+         };
+         mapping.push(keys[name]);
+         result.push("$" + varIdx);
+      }
+
       buffer = [];
       consumeVar = false;
    };

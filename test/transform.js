@@ -20,6 +20,25 @@ describe('transform', function () {
       ])
    });
 
+   describe('same var multiple times', function () {
+      before(function () {
+         ctx = {};
+         ctx.parsed = Parser.parseSql('SELECT * FROM users where id = :name and blah = :blah and name = :name and test = :test and something = :test')
+      });
+
+      it('should replace the detected variables with postgres variable indexes', function () {
+         expect(ctx.parsed.transformed).to.equal('SELECT * FROM users where id = $1 and blah = $2 and name = $1 and test = $3 and something = $3')
+      });
+
+      it('should return the mapping of postgres vars to names', function () {
+         expect(ctx.parsed.mapping).to.deep.equal([
+            { name: 'name', index: 1 },
+            { name: 'blah', index: 2 },
+            { name: 'test', index: 3 }
+         ])
+      });
+   });
+
    describe('type cast vars', function () {
       before(function () {
          ctx = {};

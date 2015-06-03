@@ -128,6 +128,7 @@ var Tiny = function (options) {
    this.callConfigs = Parser.parseFiles(this.options.rootDir);
    this.connect = Q.nbind(Pg.connect, Pg);
    this.format = PgFormat;
+   this.events = new EventEmitter();
 
    setSql(this);
 };
@@ -146,9 +147,10 @@ Tiny.pgDefaults = function (obj) {
 };
 
 Tiny.prototype.isolatedEmitter = function () {
-   var res =  _.extend({}, this, {
+   var res = _.extend({}, this, {
+      events: new EventEmitter(),
       dispose: function () {
-         this.removeAllListeners()
+         this.events.removeAllListeners()
       }
    });
 

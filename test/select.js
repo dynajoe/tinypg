@@ -35,6 +35,44 @@ describe('Tiny', function () {
                });
             });
 
+            it('should isolate if asked', function () {
+               var iso = tiny.isolatedEmitter();
+
+               var onQueryDataA, onResultDataA,
+                   onQueryDataB, onResultDataB;
+
+               tiny.on('query', function (e) {
+                  onQueryDataA = e;
+               });
+
+               tiny.on('result', function (e) {
+                  onResultDataA = e;
+               });
+
+               iso.on('query', function (e) {
+                  onQueryDataB = e;
+               });
+
+               iso.on('result', function (e) {
+                  onResultDataB = e;
+               });
+
+               return iso.sql.a.select()
+               .then(function (res) {
+                  expect(onQueryDataA).to.not.exist
+                  expect(onResultDataA).to.not.exist
+
+                  expect(onQueryDataB).to.exist
+                  expect(onResultDataB).to.exist
+
+                  iso.dispose();
+
+                  tiny.removeAllListeners();
+
+                  expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }, { id: 2, text: 'b' }, { id: 3, text: 'c' }]);
+               });
+            });
+
             it('should emit events', function () {
                var onQueryData, onResultData;
 

@@ -7,6 +7,7 @@ var _ = require('underscore');
 var PgFormat = require('pg-format');
 var Util = require('./util');
 var Uuid = require('node-uuid');
+var EventEmitter = require('events').EventEmitter;
 
 var setSql = function (db) {
    var transformPath = (db.options.snake ? Case.snake : Case.camel).bind(Case);
@@ -131,7 +132,7 @@ var Tiny = function (options) {
    setSql(this);
 };
 
-Tiny.prototype = Object.create(require('events').EventEmitter.prototype);
+Tiny.prototype = Object.create(EventEmitter.prototype);
 
 // Static
 Tiny.pg = Pg;
@@ -143,6 +144,18 @@ Tiny.pgDefaults = function (obj) {
       }
    }
 };
+
+Tiny.prototype.isolatedEmitter = function () {
+   var res =  _.extend({}, this, {
+      dispose: function () {
+         this.removeAllListeners()
+      }
+   });
+
+   setSql(res);
+
+   return res
+}
 
 // Instance
 Tiny.prototype.query = function (query, params) {

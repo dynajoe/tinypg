@@ -49,10 +49,13 @@ var dbCall = function (clientCtx, config) {
          ];
       }
 
+      var startTime = process.hrtime();
+
       var queryContext = {
          id: Uuid.v4(),
          name: name,
          sql: config.transformed,
+         start: new Date().getTime(),
          values: values,
          context: clientCtx
       };
@@ -60,9 +63,12 @@ var dbCall = function (clientCtx, config) {
       clientCtx.db.emit('query', queryContext);
 
       clientCtx.client.query.apply(clientCtx.client, params.concat(function (err, data) {
+         var now = new Date().getTime();
          clientCtx.db.emit('result', _.extend(queryContext, {
             error: err,
-            data: data
+            data: data,
+            end: now,
+            duration: now - queryContext.start
          }));
 
          err ? deferred.reject(err) : deferred.resolve(data);

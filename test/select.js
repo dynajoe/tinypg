@@ -35,6 +35,28 @@ describe('Tiny', function () {
                });
             });
 
+            it('should emit events', function () {
+               var onQueryData, onResultData;
+
+               tiny.on('query', function (e) {
+                  onQueryData = e;
+               });
+
+               tiny.on('result', function (e) {
+                  onResultData = e;
+               });
+
+               return tiny.sql.a.select()
+               .then(function (res) {
+                  expect(onQueryData).not.to.be.null
+                  expect(onResultData).not.to.be.null
+
+                  tiny.removeAllListeners();
+
+                  expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }, { id: 2, text: 'b' }, { id: 3, text: 'c' }]);
+               });
+            });
+
             describe('that have format parameters', function () {
                it('should perform the replacements', function () {
                   return tiny.sql.a.testFormat.format('a').query({

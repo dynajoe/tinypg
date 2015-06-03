@@ -6,6 +6,7 @@ var Parser = require('./parser');
 var _ = require('underscore');
 var PgFormat = require('pg-format');
 var Util = require('./util');
+var Uuid = require('node-uuid');
 
 var setSql = function (db) {
    var transformPath = (db.options.snake ? Case.snake : Case.camel).bind(Case);
@@ -40,15 +41,30 @@ var dbCall = function (clientCtx, config) {
             name: name,
             text: config.transformed,
             values: values
-         }]
+         }];
       } else {
          params = [
             config.transformed,
             values
-         ]
+         ];
       }
 
+      var queryContext = {
+         id: Uuid.v4(),
+         name: name,
+         sql: config.transformed,
+         values: values,
+         context: clientCtx
+      };
+
+      clientCtx.db.emit('query', queryContext);
+
       clientCtx.client.query.apply(clientCtx.client, params.concat(function (err, data) {
+         clientCtx.db.emit('result', _.extend(queryContext, {
+            error: err,
+            data: data
+         }));
+
          err ? deferred.reject(err) : deferred.resolve(data);
       }));
 
@@ -109,6 +125,8 @@ var Tiny = function (options) {
    setSql(this);
 };
 
+Tiny.prototype = Object.create(require('events').EventEmitter.prototype);
+
 // Static
 Tiny.pg = Pg;
 
@@ -134,11 +152,14 @@ Tiny.prototype.query = function (query, params) {
 };
 
 Tiny.prototype.getClient = function () {
+   var tiny = this;
+
    return this.connect(this.options.connString)
    .spread(function (client, done) {
       return {
          client: client,
-         done: done
+         done: done,
+         db: tiny
       };
    });
 };
@@ -169,6 +190,7 @@ Tiny.prototype.transaction = function (txFn) {
 
             return {
                client: pgClient,
+               db: tinyOverride,
                // done: Can be called several times
                done: function () {}
             };

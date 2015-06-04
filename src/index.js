@@ -61,11 +61,11 @@ var dbCall = function (clientCtx, config) {
          context: clientCtx
       };
 
-      clientCtx.db.emit('query', queryContext);
+      clientCtx.db.events.emit('query', queryContext);
 
       clientCtx.client.query.apply(clientCtx.client, params.concat(function (err, data) {
          var now = new Date().getTime();
-         clientCtx.db.emit('result', _.extend(queryContext, {
+         clientCtx.db.events.emit('result', _.extend(queryContext, {
             error: err,
             data: data,
             end: now,
@@ -132,8 +132,6 @@ var Tiny = function (options) {
 
    setSql(this);
 };
-
-Tiny.prototype = Object.create(EventEmitter.prototype);
 
 // Static
 Tiny.pg = Pg;

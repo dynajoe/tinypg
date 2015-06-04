@@ -41,19 +41,19 @@ describe('Tiny', function () {
                var onQueryDataA, onResultDataA,
                    onQueryDataB, onResultDataB;
 
-               tiny.on('query', function (e) {
+               tiny.events.on('query', function (e) {
                   onQueryDataA = e;
                });
 
-               tiny.on('result', function (e) {
+               tiny.events.on('result', function (e) {
                   onResultDataA = e;
                });
 
-               iso.on('query', function (e) {
+               iso.events.on('query', function (e) {
                   onQueryDataB = e;
                });
 
-               iso.on('result', function (e) {
+               iso.events.on('result', function (e) {
                   onResultDataB = e;
                });
 
@@ -67,7 +67,7 @@ describe('Tiny', function () {
 
                   iso.dispose();
 
-                  tiny.removeAllListeners();
+                  tiny.events.removeAllListeners();
 
                   expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }, { id: 2, text: 'b' }, { id: 3, text: 'c' }]);
                });
@@ -76,11 +76,11 @@ describe('Tiny', function () {
             it('should emit events', function () {
                var onQueryData, onResultData;
 
-               tiny.on('query', function (e) {
+               tiny.events.on('query', function (e) {
                   onQueryData = e;
                });
 
-               tiny.on('result', function (e) {
+               tiny.events.on('result', function (e) {
                   onResultData = e;
                });
 
@@ -89,7 +89,7 @@ describe('Tiny', function () {
                   expect(onQueryData).not.to.be.null
                   expect(onResultData).not.to.be.null
 
-                  tiny.removeAllListeners();
+                  tiny.events.removeAllListeners();
 
                   expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }, { id: 2, text: 'b' }, { id: 3, text: 'c' }]);
                });

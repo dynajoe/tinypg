@@ -40,3 +40,10 @@ module.exports.assertPromise = function (result) {
       throw new Error('Expected transaction function to return a promise.');
    }
 };
+
+module.exports.TinyPgError = function TinyPgError(message) {
+  this.constructor.prototype.__proto__ = Error.prototype;
+  Error.captureStackTrace(this, this.constructor);
+  this.name = this.constructor.name;
+  this.message = message;
+};

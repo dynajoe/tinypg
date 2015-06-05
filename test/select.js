@@ -1,6 +1,7 @@
 var Tiny = require('../src/index');
 var Q = require('q');
 var Pg = require('pg');
+var Util = require('../src/util');
 var expect = require('chai').expect;
 var setUpDb = require('./helper').setUpDb;
 var insertA = require('./helper').insertA;
@@ -130,7 +131,18 @@ describe('Tiny', function () {
                      expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }]);
                   });
                });
-            })
+            });
+
+            describe('that throws an error', function () {
+               it('should wrap the error with the queryContext', function () {
+                  return tiny.sql.a.queryWithError()
+                  .catch(function (err) {
+                     expect(err).to.be.instanceof(Util.TinyPgError);
+                     expect(err).to.have.property('queryContext');
+                     expect(err.message).to.include('blah_doesnt_exist');
+                  });
+               });
+            });
          });
 
          describe('Raw queries', function () {
@@ -141,7 +153,7 @@ describe('Tiny', function () {
                });
             });
          });
-      })
+      });
    };
 
    tests('Raw Statements');

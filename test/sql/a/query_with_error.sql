@@ -1,0 +1,1 @@
+select * from blah_doesnt_exist

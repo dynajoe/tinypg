@@ -28,9 +28,9 @@ var setSql = function (db) {
 };
 
 var dbCall = function (clientCtx, config) {
-   return function (params) {
+   return function (inputParams) {
       var values = config.mapping.map(function (m) {
-         return params[m.name];
+         return inputParams[m.name];
       });
 
       var deferred = Q.defer();
@@ -72,7 +72,12 @@ var dbCall = function (clientCtx, config) {
             duration: now - queryContext.start
          }));
 
-         err ? deferred.reject(err) : deferred.resolve(data);
+         if (err) {
+            err.queryContext = queryContext;
+            return deferred.reject(err);
+         }
+         
+         deferred.resolve(data);
       }));
 
       return deferred.promise;
@@ -100,12 +105,19 @@ var formatFn = function (config, getClient) {
 
 var createDbCallFn = function (getClient, config) {
    var fn = function (params) {
+      var e = new Util.TinyPgError();
+      Error.captureStackTrace(e, arguments.callee);
       return getClient()
       .then(function (clientCtx) {
          return dbCall(clientCtx, config)(params)
          .fin(function () {
             clientCtx.done();
          });
+      })
+      .catch(function (err) {
+         e.queryContext = err.queryContext;
+         e.message = err.message;
+         throw e;
       });
    };
 

@@ -65,15 +65,18 @@ var dbCall = function (clientCtx, config) {
 
       clientCtx.client.query.apply(clientCtx.client, params.concat(function (err, data) {
          var now = new Date().getTime();
-         clientCtx.db.events.emit('result', _.extend(queryContext, {
-            error: err,
-            data: data,
+         var context = _.extend(queryContext, {
             end: now,
             duration: now - queryContext.start
+         });
+
+         clientCtx.db.events.emit('result', _.extend(context, {
+            error: err,
+            data: data
          }));
 
          if (err) {
-            err.queryContext = queryContext;
+            err.queryContext = _.omit(context, 'context');
             return deferred.reject(err);
          }
          

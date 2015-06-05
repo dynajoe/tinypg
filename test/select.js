@@ -139,6 +139,7 @@ describe('Tiny', function () {
                   .catch(function (err) {
                      expect(err).to.be.instanceof(Util.TinyPgError);
                      expect(err).to.have.property('queryContext');
+                     expect(err.queryContext).to.not.have.property('context');
                      expect(err.message).to.include('blah_doesnt_exist');
                   });
                });

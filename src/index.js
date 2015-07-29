@@ -79,7 +79,7 @@ var dbCall = function (clientCtx, config) {
             err.queryContext = _.omit(context, 'context');
             return deferred.reject(err);
          }
-         
+
          deferred.resolve(data);
       }));
 
@@ -135,17 +135,19 @@ var Tiny = function (options) {
    this.pg = Pg;
 
    this.options = _.extend({
-      snake: false,
       connString: options.connectionString || options.connection_string,
+      snake: false,
       rootDir: options.root_dir || options.rootDir
    }, options);
 
-   this.callConfigs = Parser.parseFiles(this.options.rootDir);
    this.connect = Q.nbind(Pg.connect, Pg);
    this.format = PgFormat;
    this.events = new EventEmitter();
 
-   setSql(this);
+   if (options.rootDir) {
+      this.callConfigs = Parser.parseFiles(this.options.rootDir);
+      setSql(this);
+   }
 };
 
 // Static

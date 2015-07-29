@@ -3,8 +3,8 @@ var Q = require('q');
 var Pg = require('pg');
 var _ = require('underscore');
 
-var connectionString = 'postgres://joe@localhost:5432/';
 var dbSchema = module.exports.dbSchema = 'tiny_test_db';
+var connectionString = module.exports.connectionString = 'postgres://joe@localhost:5432/';
 
 var dbQuery = module.exports.dbQuery = function () {
    var args = Array.prototype.slice.call(arguments, 0)

@@ -1,6 +1,6 @@
 {
   "name": "tinypg",
-  "version": "0.0.25",
+  "version": "0.0.26",
   "description": "Easy way to call sql files using postgres.",
   "main": "index.js",
   "scripts": {

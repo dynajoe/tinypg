@@ -7,6 +7,7 @@ var setUpDb = require('./helper').setUpDb;
 var insertA = require('./helper').insertA;
 var newTiny = require('./helper').newTiny;
 var dbSchema = require('./helper').dbSchema;
+var connectionString = require('./helper').connectionString;
 
 describe('Tiny', function () {
    beforeEach(function () {
@@ -160,4 +161,15 @@ describe('Tiny', function () {
    tests('Raw Statements');
 
    tests('Prepared Statements', { prepared: true });
+
+   it('should allow creating an instance of tiny without directory', function () {
+      var tiny = new Tiny({
+         connectionString: connectionString
+      });
+
+      return tiny.query('SELECT 1 as x')
+      .then(function (res) {
+         expect(res.rows).to.deep.equal([{ x: 1 }]);
+      })
+   });
 });

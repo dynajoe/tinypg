@@ -144,7 +144,7 @@ var Tiny = function (options) {
    this.format = PgFormat;
    this.events = new EventEmitter();
 
-   if (options.rootDir) {
+   if (this.options.rootDir) {
       this.callConfigs = Parser.parseFiles(this.options.rootDir);
       setSql(this);
    }

@@ -102,7 +102,7 @@ describe('Transactions', function () {
          })
       });
 
-      it('should rollback on a failed inner transaction', function () {
+      it.only('should rollback on a failed inner transaction', function () {
          return tiny.transaction(function (ctx) {
             return ctx.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
                text: '1'
@@ -110,7 +110,7 @@ describe('Transactions', function () {
             .then(function (res) {
                return ctx.transaction(function (ctx2) {
                   return ctx2.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
-                     text: '2'
+                     text: '1'
                   })
                   .then(function () {
                      throw new Error('THIS SHOULD ABORT');

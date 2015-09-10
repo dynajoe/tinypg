@@ -54,7 +54,7 @@ module.exports.setUpDb = function () {
       'DROP SCHEMA IF EXISTS {dbSchema} CASCADE;',
       'CREATE SCHEMA {dbSchema};',
       'SET search_path TO {dbSchema};',
-      'CREATE TABLE {dbSchema}.a (id serial PRIMARY KEY, text text);'
+      'CREATE TABLE {dbSchema}.a (id serial PRIMARY KEY, text text UNIQUE);'
    ];
 
    return commands.reduce(function (acc, c) {

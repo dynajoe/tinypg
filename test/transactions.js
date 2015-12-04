@@ -102,7 +102,7 @@ describe('Transactions', function () {
          })
       });
 
-      it.only('should rollback on a failed inner transaction', function () {
+      it('should rollback on a failed inner transaction', function () {
          return tiny.transaction(function (ctx) {
             return ctx.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
                text: '1'

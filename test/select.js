@@ -108,6 +108,19 @@ describe('Tiny', function () {
                });
             });
 
+            describe('that have nested parameters', function () {
+               it('should perform the replacements', function () {
+                  return tiny.sql.a.testNested({
+                     a: {
+                        foo: 'a'
+                     }
+                  })
+                  .then(function (res) {
+                     expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }]);
+                  });
+               });
+            });
+
             describe('that have format parameters that inject variables', function () {
                it('should perform the replacements', function () {
                   return tiny.sql.a.testMultiFormat

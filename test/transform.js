@@ -56,4 +56,22 @@ describe('transform', function () {
          ])
       });
    })
+
+   describe('indexing objects', function () {
+      before(function () {
+         ctx = {};
+         ctx.parsed = Parser.parseSql('SELECT * FROM users where id = :id.foo and name = :name.bar')
+      });
+
+      it('should replace the detected variables with postgres variable indexes', function () {
+         expect(ctx.parsed.transformed).to.equal('SELECT * FROM users where id = $1 and name = $2')
+      });
+
+      it('should return the mapping of postgres vars to names', function () {
+         expect(ctx.parsed.mapping).to.deep.equal([
+            { name: 'id.foo', index: 1 },
+            { name: 'name.bar', index: 2 }
+         ])
+      });
+   })
 });

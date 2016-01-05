@@ -30,6 +30,9 @@ var setSql = function (db) {
 var dbCall = function (clientCtx, config) {
    return function (inputParams) {
       var values = config.mapping.map(function (m) {
+         if (!_.has(inputParams, m.name)) {
+            throw new Error('Missing expected key [' + m.name + '] on input parameters.')
+         }
          return _.get(inputParams, m.name);
       });
 

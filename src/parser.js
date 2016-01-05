@@ -4,7 +4,8 @@ var Path = require('path');
 
 var parseSql = function (sql) {
    var consumeVar = false;
-   var validChar = /\w/;
+   var validStartChar = /\w/;
+   var validChar = /(\w|\.)/;
    var buffer = [];
    var result = [];
    var mapping = [];
@@ -43,7 +44,7 @@ var parseSql = function (sql) {
       if (consumeVar && !validChar.test(c)) {
          pushVar()
       }
-      else if (c === ':' && p !== ':' && validChar.test(n)) {
+      else if (c === ':' && p !== ':' && validStartChar.test(n)) {
          consumeVar = true;
          pushText();
          continue;

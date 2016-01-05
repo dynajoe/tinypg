@@ -3,7 +3,7 @@ var Q = require('q');
 var Path = require('path');
 var Case = require('case');
 var Parser = require('./parser');
-var _ = require('underscore');
+var _ = require('lodash');
 var PgFormat = require('pg-format');
 var Util = require('./util');
 var Uuid = require('node-uuid');
@@ -30,7 +30,10 @@ var setSql = function (db) {
 var dbCall = function (clientCtx, config) {
    return function (inputParams) {
       var values = config.mapping.map(function (m) {
-         return inputParams[m.name];
+         if (!_.has(inputParams, m.name)) {
+            throw new Error('Missing expected key [' + m.name + '] on input parameters.')
+         }
+         return _.get(inputParams, m.name);
       });
 
       var deferred = Q.defer();
@@ -162,12 +165,12 @@ Tiny.pgDefaults = function (obj) {
 };
 
 Tiny.prototype.isolatedEmitter = function () {
-   var res = _.extend({}, this, {
+   var res = _.create(Tiny.prototype, _.extend({}, this, {
       events: new EventEmitter(),
       dispose: function () {
          this.events.removeAllListeners()
       }
-   });
+   }));
 
    setSql(res);
 

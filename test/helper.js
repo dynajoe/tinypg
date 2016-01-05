@@ -1,7 +1,7 @@
 var Tiny = require('../src/index')
 var Q = require('q');
 var Pg = require('pg');
-var _ = require('underscore');
+var _ = require('lodash');
 
 var dbSchema = module.exports.dbSchema = 'tiny_test_db';
 var connectionString = module.exports.connectionString = 'postgres://joe@localhost:5432/';

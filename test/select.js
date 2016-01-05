@@ -108,6 +108,32 @@ describe('Tiny', function () {
                });
             });
 
+            describe('that have nested parameters', function () {
+               it('should perform the replacements', function () {
+                  return tiny.sql.a.testNested({
+                     a: {
+                        foo: 'a'
+                     }
+                  })
+                  .then(function (res) {
+                     expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }]);
+                  });
+               });
+            });
+
+            describe('that have missing parameters', function () {
+               it('should perform the replacements', function () {
+                  return tiny.sql.a.testMissingParams({
+                     a: 'a'
+                  })
+                  .catch(function (err) {
+                     expect(err).to.be.instanceof(Util.TinyPgError);
+                     expect(err).to.have.property('queryContext');
+                     expect(err.message).to.include('this_is_the_missing_param');
+                  });
+               });
+            });
+
             describe('that have format parameters that inject variables', function () {
                it('should perform the replacements', function () {
                   return tiny.sql.a.testMultiFormat

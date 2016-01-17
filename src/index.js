@@ -138,17 +138,15 @@ var Tiny = function (options) {
    this.pg = Pg;
 
    this.options = _.extend({
-      connString: options.connectionString || options.connection_string,
-      snake: false,
-      rootDir: options.root_dir || options.rootDir
+      snake: false
    }, options);
 
    this.connect = Q.nbind(Pg.connect, Pg);
    this.format = PgFormat;
    this.events = new EventEmitter();
 
-   if (this.options.rootDir) {
-      this.callConfigs = Parser.parseFiles(this.options.rootDir);
+   if (this.options.root_dir) {
+      this.callConfigs = Parser.parseFiles(this.options.root_dir);
       setSql(this);
    }
 };
@@ -193,7 +191,7 @@ Tiny.prototype.query = function (query, params) {
 Tiny.prototype.getClient = function () {
    var tiny = this;
 
-   return this.connect(this.options.connString)
+   return this.connect(this.options.connection_string)
    .spread(function (client, done) {
       return {
          client: client,

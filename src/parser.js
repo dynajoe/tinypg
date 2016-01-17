@@ -1,6 +1,8 @@
 var Fs = require('fs');
 var Glob = require('glob');
 var Path = require('path');
+var _ = require('lodash');
+var TinyPgError = require('./util').TinyPgError;
 
 var parseSql = function (sql) {
    var consumeVar = false;
@@ -62,29 +64,51 @@ var parseSql = function (sql) {
 };
 
 var parseFiles = function (rootDir) {
-   var root = Path.resolve(rootDir);
-   var files = Glob.sync(Path.join(root, './**/*.sql'));
-   var sqlFiles = [];
+   var rootDirs = [].concat(rootDir)
 
-   for (var i = 0; i < files.length; i++) {
-      var f = files[i];
-      var relative_path = f.substring(root.length);
+   var result = _.flatMap(rootDirs, function (d) {
+      var root = Path.resolve(d);
+      var searchPath = Path.join(root, './**/*.sql');
+      var files = Glob.sync(searchPath);
+      var sqlFiles = [];
 
-      var data = {
-         name: relative_path.replace(/\W/ig, '_').replace('_', ''),
-         path: f,
-         relative_path: relative_path,
-         text: Fs.readFileSync(f).toString()
-      };
+      for (var i = 0; i < files.length; i++) {
+         var f = files[i];
+         var relative_path = f.substring(root.length);
 
-      var result = parseSql(data.text);
-      data.transformed = result.transformed;
-      data.mapping = result.mapping;
+         var data = {
+            name: relative_path.replace(/\W/ig, '_').replace('_', ''),
+            path: f,
+            relative_path: relative_path,
+            text: Fs.readFileSync(f).toString()
+         };
 
-      sqlFiles.push(data);
+         var result = parseSql(data.text);
+         data.transformed = result.transformed;
+         data.mapping = result.mapping;
+
+         sqlFiles.push(data);
+      }
+
+      return sqlFiles;
+   });
+
+   var conflicts = _.chain(result)
+   .groupBy('name')
+   .filter(function (x) {
+      return x.length > 1
+   })
+   .value()
+
+   if (conflicts.length > 0) {
+      var message = "Conflicting sql source paths found (" + conflicts.map(function (c) {
+         return c[0].relative_path
+      }).join(', ') + "). All source files under root dirs must have different relative paths."
+
+      throw new TinyPgError(message);
    }
 
-   return sqlFiles;
+   return result;
 };
 
 module.exports = {

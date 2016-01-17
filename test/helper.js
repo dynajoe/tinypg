@@ -66,7 +66,7 @@ module.exports.setUpDb = function () {
 
 module.exports.newTiny = function (options) {
    return new Tiny(_.extend({
-      connectionString: connectionString,
-      rootDir: __dirname + '/sql/'
+      connection_string: connectionString,
+      root_dir: __dirname + '/sql/'
    }, options));
 };

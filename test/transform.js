@@ -68,6 +68,40 @@ describe('transform', function () {
       });
    })
 
+   describe('vars after comments with quotes', () => {
+      it('should ignore single line comments', () => {
+         const parsed = Parser.parseSql(`
+            SELECT * FROM users
+            -- Ignore all things who aren't after a certain date
+            WHERE created_on > '2011-01-01 10:00:00'::timestamptz
+         `)
+
+         expect(parsed.transformed).to.equal(`
+            SELECT * FROM users
+            -- Ignore all things who aren't after a certain date
+            WHERE created_on > '2011-01-01 10:00:00'::timestamptz
+         `)
+      })
+
+      it('should ignore multi-line comments', () => {
+         const parsed = Parser.parseSql(`
+            SELECT * FROM users
+            /* Ignore all things who aren't after a certain :date
+             * More lines
+             */
+            WHERE created_on > '2011-01-01 10:00:00'::timestamptz
+         `)
+
+         expect(parsed.transformed).to.equal(`
+            SELECT * FROM users
+            /* Ignore all things who aren't after a certain :date
+             * More lines
+             */
+            WHERE created_on > '2011-01-01 10:00:00'::timestamptz
+         `)
+      })
+   })
+
    describe('indexing objects', function () {
       before(function () {
          ctx = {};

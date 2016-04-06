@@ -14,6 +14,8 @@ var parseSql = function (sql) {
    var mapping = [];
    var keys = {};
    var varIdx = 0;
+   var singleLineComment = false;
+   var multiLineComment = 0;
 
    var pushVar = function () {
       var name = buffer.join('');
@@ -44,7 +46,10 @@ var parseSql = function (sql) {
       var n = sql[i + 1];
       var p = sql[i - 1];
 
-      if (consumeVar && !validChar.test(c)) {
+      if (singleLineComment || multiLineComment > 0) {
+         // do nothing while in comment
+      }
+      else if (consumeVar && !validChar.test(c)) {
          pushVar()
       }
       else if (c === ':' && p !== ':' && validStartChar.test(n) && !inString) {
@@ -53,6 +58,14 @@ var parseSql = function (sql) {
          continue;
       } else if (c === '\'' && p !== '\\') {
          inString = !inString;
+      } else if (c === '-' && p === '-') {
+         singleLineComment = true
+      } else if (singleLineComment && c === '\n') {
+         singleLineComment = false
+      } else if (c === '*' && p === '/') {
+         multiLineComment++
+      } else if (c === '/' && p === '*') {
+         multiLineComment = Math.max(0, multiLineComment - 1)
       }
 
       buffer.push(c)

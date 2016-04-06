@@ -102,6 +102,26 @@ describe('transform', function () {
       })
    })
 
+   describe('comments in strings', function () {
+      it('should ignore multi-line comments', () => {
+         const parsed = Parser.parseSql(`
+            SELECT * FROM users
+            /* Ignore all things who aren't after a certain :date
+             * More lines
+             */
+            WHERE some_text LIKE 'foo -- bar' AND :date::timestamptz
+         `)
+
+         expect(parsed.transformed).to.equal(`
+            SELECT * FROM users
+            /* Ignore all things who aren't after a certain :date
+             * More lines
+             */
+            WHERE some_text LIKE 'foo -- bar' AND $1::timestamptz
+         `)
+      })
+   })
+
    describe('indexing objects', function () {
       before(function () {
          ctx = {};

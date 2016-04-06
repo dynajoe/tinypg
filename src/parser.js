@@ -41,24 +41,16 @@ var parseSql = function (sql) {
       buffer = [];
    };
 
+   var ignoring = false;
+
    for (var i = 0; i < sql.length; i++) {
       var c = sql[i];
       var n = sql[i + 1];
       var p = sql[i - 1];
 
-      if (singleLineComment || multiLineComment > 0) {
-         // do nothing while in comment
-      }
-      else if (consumeVar && !validChar.test(c)) {
-         pushVar()
-      }
-      else if (c === ':' && p !== ':' && validStartChar.test(n) && !inString) {
-         consumeVar = true;
-         pushText();
-         continue;
-      } else if (c === '\'' && p !== '\\') {
+      if (!multiLineComment && !singleLineComment && c === '\'' && p !== '\\') {
          inString = !inString;
-      } else if (c === '-' && p === '-') {
+      } else if (!inString && c === '-' && p === '-') {
          singleLineComment = true
       } else if (singleLineComment && c === '\n') {
          singleLineComment = false
@@ -68,7 +60,22 @@ var parseSql = function (sql) {
          multiLineComment = Math.max(0, multiLineComment - 1)
       }
 
-      buffer.push(c)
+      ignoring = inString || singleLineComment || multiLineComment > 0
+
+      if (ignoring) {
+         buffer.push(c)
+      } else {
+         if (consumeVar && !validChar.test(c)) {
+            pushVar()
+         }
+         else if (c === ':' && p !== ':' && validStartChar.test(n)) {
+            consumeVar = true;
+            pushText()
+            continue
+         }
+
+         buffer.push(c)
+      }
    }
 
    consumeVar ? pushVar() : pushText();

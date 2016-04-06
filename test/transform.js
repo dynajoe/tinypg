@@ -57,6 +57,17 @@ describe('transform', function () {
       });
    })
 
+   describe('vars in a quoted string', function () {
+      before(function () {
+         ctx = {};
+         ctx.parsed = Parser.parseSql('SELECT * FROM users where created_on > \'2011-01-01 10:00:00\'::timestamptz')
+      });
+
+      it('should be ignored', function () {
+         expect(ctx.parsed.transformed).to.equal('SELECT * FROM users where created_on > \'2011-01-01 10:00:00\'::timestamptz')
+      });
+   })
+
    describe('indexing objects', function () {
       before(function () {
          ctx = {};

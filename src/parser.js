@@ -6,6 +6,7 @@ var TinyPgError = require('./util').TinyPgError;
 
 var parseSql = function (sql) {
    var consumeVar = false;
+   var inString = false;
    var validStartChar = /\w/;
    var validChar = /(\w|\.)/;
    var buffer = [];
@@ -46,10 +47,12 @@ var parseSql = function (sql) {
       if (consumeVar && !validChar.test(c)) {
          pushVar()
       }
-      else if (c === ':' && p !== ':' && validStartChar.test(n)) {
+      else if (c === ':' && p !== ':' && validStartChar.test(n) && !inString) {
          consumeVar = true;
          pushText();
          continue;
+      } else if (c === '\'' && p !== '\\') {
+         inString = !inString;
       }
 
       buffer.push(c)

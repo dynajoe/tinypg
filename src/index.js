@@ -37,7 +37,7 @@ var dbCall = function (clientCtx, config) {
       });
 
       var deferred = Q.defer();
-      var name = config.name + '_' + Util.hashCode(config.transformed).toString().replace('-', 'n');
+      var name = (config.name ? config.name + '_' : '') + Util.hashCode(config.transformed).toString().replace('-', 'n');
       var params;
 
       if (config.prepared) {

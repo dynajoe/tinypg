@@ -198,4 +198,36 @@ describe('Tiny', function () {
          expect(res.rows).to.deep.equal([{ x: 1 }]);
       })
    });
+
+   it('should transform errors', function () {
+      var expectedError = { foo: 'bar' };
+
+      var tiny = new Tiny({
+         connectionString: connectionString,
+         error_transformer: function (err) {
+            return expectedError;
+         }
+      });
+
+      return tiny.query('SELECT THIS_WILL_THROW_ERROR;')
+      .catch(function (err) {
+         expect(err).to.deep.equal(expectedError);
+      });
+   });
+
+   it('should transform results', function () {
+      var expectedResults = { baz: 'bar' };
+
+      var tiny = new Tiny({
+         connectionString: connectionString,
+         result_transformer: function (results) {
+            return expectedResults;
+         }
+      });
+
+      return tiny.query('SELECT 1;')
+      .then(function (res) {
+         expect(res).to.deep.equal(expectedResults);
+      });
+   });
 });

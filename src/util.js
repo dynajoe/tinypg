@@ -47,3 +47,9 @@ module.exports.TinyPgError = function TinyPgError(message) {
   this.name = this.constructor.name;
   this.message = message;
 };
+
+module.exports.captureStackTrace = function () {
+   var e = new Error();
+   Error.captureStackTrace(e, arguments.callee);
+   return e.stack;
+}

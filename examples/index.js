@@ -1,7 +1,7 @@
 var Tiny = require('../');
 
 var t = new Tiny({
-   connection_string: "postgres://joe@localhost:5432/mydb",
+   connection_string: "postgres://postgres@localhost:5432/mydb",
    root_dir: __dirname + '/sql_files',
    snake: true
 });

@@ -16,7 +16,7 @@ I created this project to use for my special case. It probably won't work for yo
 var Tiny = require('tinypg');
 
 var t = new Tiny({
-   connection_string: "postgres://joe@localhost:5432/mydb",
+   connection_string: "postgres://postgres@localhost:5432/mydb",
    root_dir: './sql_files',
    snake: true // camel: true is default
 });
@@ -58,7 +58,7 @@ If you do not use the provided context, those queries cannot be guaranteed to us
 
 ```javascript
    var t = new Tiny({
-      connection_string: "postgres://joe@localhost:5432/mydb",
+      connection_string: "postgres://postgres@localhost:5432/mydb",
       root_dir: './sql_files',
       snake: true // camel: true is default
    });

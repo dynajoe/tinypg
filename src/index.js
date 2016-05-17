@@ -27,72 +27,77 @@ var setSql = function (db) {
    db.sql = sqlObj;
 };
 
-var dbCall = function (clientCtx, config) {
+var dbCall = function (clientCtx, config, stackTrace) {
    return function (inputParams) {
-      var values = config.mapping.map(function (m) {
-         if (!_.has(inputParams, m.name)) {
-            throw new Error('Missing expected key [' + m.name + '] on input parameters.')
-         }
-         return _.get(inputParams, m.name);
-      });
-
-      var deferred = Q.defer();
-      var name = (config.name ? config.name + '_' : '') + Util.hashCode(config.transformed).toString().replace('-', 'n');
-      var params;
-
-      if (config.prepared) {
-         params = [{
-            name: name,
-            text: config.transformed,
-            values: values
-         }];
-      } else {
-         params = [
-            config.transformed,
-            values
-         ];
-      }
-
-      var startTime = process.hrtime();
-
-      var queryContext = {
-         id: Uuid.v4(),
-         name: name,
-         sql: config.transformed,
-         start: new Date().getTime(),
-         values: values,
-         context: clientCtx
-      };
-
-      clientCtx.db.events.emit('query', queryContext);
-
-      clientCtx.client.query.apply(clientCtx.client, params.concat(function (err, data) {
-         var now = new Date().getTime();
-         var context = _.extend(queryContext, {
-            end: now,
-            duration: now - queryContext.start
+      return Q.fcall(function () {
+         var values = config.mapping.map(function (m) {
+            if (!_.has(inputParams, m.name)) {
+               throw new Error('Missing expected key [' + m.name + '] on input parameters.')
+            }
+            return _.get(inputParams, m.name);
          });
 
-         clientCtx.db.events.emit('result', _.extend(context, {
-            error: err,
-            data: data
-         }));
+         var deferred = Q.defer();
+         var name = (config.name ? config.name + '_' : '') + Util.hashCode(config.transformed).toString().replace('-', 'n');
+         var params;
 
-         if (err) {
-            var e = new Util.TinyPgError();
-            e.message = err.message;
-            e.queryContext = _.omit(context, 'context');;
-            e.stack = err.stack;
-
-            var transformed = clientCtx.db.options.error_transformer(e)
-            return deferred.reject(transformed);
+         if (config.prepared) {
+            params = [{
+               name: name,
+               text: config.transformed,
+               values: values
+            }];
+         } else {
+            params = [
+               config.transformed,
+               values
+            ];
          }
 
-         data = clientCtx.db.options.result_transformer(data)
-         deferred.resolve(data);
-      }));
+         var startTime = process.hrtime();
 
-      return deferred.promise;
+         var queryContext = {
+            id: Uuid.v4(),
+            name: name,
+            sql: config.transformed,
+            start: new Date().getTime(),
+            values: values,
+            context: clientCtx
+         };
+
+         clientCtx.db.events.emit('query', queryContext);
+
+         clientCtx.client.query.apply(clientCtx.client, params.concat(function (err, data) {
+            var now = new Date().getTime();
+            var context = _.extend(queryContext, {
+               end: now,
+               duration: now - queryContext.start
+            });
+
+            clientCtx.db.events.emit('result', _.extend(context, {
+               error: err,
+               data: data
+            }));
+
+            if (err) {
+               return deferred.reject(err);
+            }
+
+            data = clientCtx.db.options.result_transformer(data)
+            deferred.resolve(data);
+         }));
+
+         return deferred.promise;
+      })
+      .catch(function (err) {
+         var tinyError = new Util.TinyPgError();
+
+         tinyError.message = err.message;
+         tinyError.queryContext = _.omit(context, 'context');
+         tinyError.stack = stackTrace;
+
+         throw clientCtx.db.options.error_transformer(tinyError);
+      });
    };
 };
 
@@ -117,20 +122,14 @@ var formatFn = function (config, getClient) {
 
 var createDbCallFn = function (getClient, config) {
    var fn = function (params) {
-      var stack_trace_error = new Error();
-      Error.captureStackTrace(stack_trace_error, arguments.callee);
-      var stack_trace = stack_trace_error.stack;
+      var stackTrace = Util.captureStackTrace();
 
       return getClient()
       .then(function (clientCtx) {
-         return dbCall(clientCtx, config)(params)
+         return dbCall(clientCtx, config, stackTrace)(params)
          .fin(function () {
             clientCtx.done();
          });
-      })
-      .catch(function (err) {
-         err.stack = stack_trace;
-         throw err;
       });
    };
 
@@ -146,9 +145,7 @@ var Tiny = function (options) {
 
    this.options = _.extend({
       snake: false,
-      error_transformer: function(err) {
-         return e;
-      },
+      error_transformer: _.identity,
       result_transformer: _.identity,
    }, options);
 
@@ -188,11 +185,12 @@ Tiny.prototype.isolatedEmitter = function () {
 
 // Instance
 Tiny.prototype.query = function (query, params) {
+   var stackTrace = Util.captureStackTrace();
    var parsedSql = Parser.parseSql(query);
 
    return this.getClient()
    .then(function (clientCtx) {
-      return dbCall(clientCtx, parsedSql)(params)
+      return dbCall(clientCtx, parsedSql, stackTrace)(params)
       .fin(function () {
          clientCtx.done();
       });

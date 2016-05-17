@@ -170,6 +170,18 @@ describe('Tiny', function () {
                      expect(err.message).to.include('blah_doesnt_exist');
                   });
                });
+
+               it('should have the correct stack trace', function () {
+                  var thisShouldBeInStack = function () {
+                     return tiny.sql.a.queryWithError()
+                     .catch(function (err) {
+                        expect(err.stack).to.include('queryWithError');
+                        expect(err.stack).to.include('thisShouldBeInStack');
+                     });
+                  }
+
+                  return thisShouldBeInStack();
+               });
             });
          });
 
@@ -178,6 +190,29 @@ describe('Tiny', function () {
                return tiny.query('SELECT * FROM ' + dbSchema + '.a')
                .then(function (res) {
                   expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }, { id: 2, text: 'b' }, { id: 3, text: 'c' }]);
+               });
+            });
+
+            describe('When an error is thrown', function () {
+               it('should have appropriate metadata', function () {
+                  return tiny.query('SELECT THIS_WILL_THROW_ERROR;')
+                  .catch(function (err) {
+                     expect(err).to.be.instanceof(Util.TinyPgError);
+                     expect(err).to.have.property('queryContext');
+                     expect(err.queryContext).to.not.have.property('context');
+                     expect(err.message).to.include('does not exist');
+                  });
+               })
+
+               it('should have the correct stack trace', function () {
+                  var thisShouldBeInStack = function () {
+                     return tiny.query('SELECT THIS_WILL_THROW_ERROR;')
+                     .catch(function (err) {
+                        expect(err.stack).to.include('thisShouldBeInStack');
+                     });
+                  }
+
+                  return thisShouldBeInStack();
                });
             });
          });

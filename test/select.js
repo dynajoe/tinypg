@@ -167,6 +167,7 @@ describe('Tiny', function () {
                      expect(err).to.be.instanceof(Util.TinyPgError);
                      expect(err).to.have.property('queryContext');
                      expect(err.queryContext).to.not.have.property('context');
+                     expect(err.queryContext.error.code).to.equal('42P01');
                      expect(err.message).to.include('blah_doesnt_exist');
                   });
                });
@@ -199,6 +200,7 @@ describe('Tiny', function () {
                   .catch(function (err) {
                      expect(err).to.be.instanceof(Util.TinyPgError);
                      expect(err).to.have.property('queryContext');
+                     expect(err.queryContext.error.code).to.equal('42703');
                      expect(err.queryContext).to.not.have.property('context');
                      expect(err.message).to.include('does not exist');
                   });

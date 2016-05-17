@@ -29,6 +29,16 @@ var setSql = function (db) {
 
 var dbCall = function (clientCtx, config, stackTrace) {
    return function (inputParams) {
+      var name = (config.name ? config.name + '_' : '') + Util.hashCode(config.transformed).toString().replace('-', 'n');
+
+      var queryContext = {
+         id: Uuid.v4(),
+         sql: config.transformed,
+         start: new Date().getTime(),
+         name: name,
+         context: clientCtx,
+      }
+
       return Q.fcall(function () {
          var values = config.mapping.map(function (m) {
             if (!_.has(inputParams, m.name)) {
@@ -38,7 +48,6 @@ var dbCall = function (clientCtx, config, stackTrace) {
          });
 
          var deferred = Q.defer();
-         var name = (config.name ? config.name + '_' : '') + Util.hashCode(config.transformed).toString().replace('-', 'n');
          var params;
 
          if (config.prepared) {
@@ -54,30 +63,23 @@ var dbCall = function (clientCtx, config, stackTrace) {
             ];
          }
 
-         var startTime = process.hrtime();
-
-         var queryContext = {
-            id: Uuid.v4(),
-            name: name,
-            sql: config.transformed,
-            start: new Date().getTime(),
+         _.assign(queryContext, {
             values: values,
-            context: clientCtx
-         };
+         });
 
          clientCtx.db.events.emit('query', queryContext);
 
          clientCtx.client.query.apply(clientCtx.client, params.concat(function (err, data) {
             var now = new Date().getTime();
-            var context = _.extend(queryContext, {
+
+            _.assign(queryContext, {
                end: now,
-               duration: now - queryContext.start
+               duration: now - queryContext.start,
+               error: err,
+               data: data,
             });
 
-            clientCtx.db.events.emit('result', _.extend(context, {
-               error: err,
-               data: data
-            }));
+            clientCtx.db.events.emit('result', queryContext);
 
             if (err) {
                return deferred.reject(err);
@@ -93,7 +95,7 @@ var dbCall = function (clientCtx, config, stackTrace) {
          var tinyError = new Util.TinyPgError();
 
          tinyError.message = err.message;
-         tinyError.queryContext = _.omit(context, 'context');
+         tinyError.queryContext = _.omit(queryContext, 'context');
          tinyError.stack = stackTrace;
 
          throw clientCtx.db.options.error_transformer(tinyError);

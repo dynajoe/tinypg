@@ -79,10 +79,16 @@ var dbCall = function (clientCtx, config) {
          }));
 
          if (err) {
-            err.queryContext = _.omit(context, 'context');
-            return deferred.reject(err);
+            var e = new Util.TinyPgError();
+            e.message = err.message;
+            e.queryContext = _.omit(context, 'context');;
+            e.stack = err.stack;
+
+            var transformed = clientCtx.db.options.error_transformer(e)
+            return deferred.reject(transformed);
          }
 
+         data = clientCtx.db.options.result_transformer(data)
          deferred.resolve(data);
       }));
 
@@ -111,8 +117,10 @@ var formatFn = function (config, getClient) {
 
 var createDbCallFn = function (getClient, config) {
    var fn = function (params) {
-      var e = new Util.TinyPgError();
-      Error.captureStackTrace(e, arguments.callee);
+      var stack_trace_error = new Error();
+      Error.captureStackTrace(stack_trace_error, arguments.callee);
+      var stack_trace = stack_trace_error.stack;
+
       return getClient()
       .then(function (clientCtx) {
          return dbCall(clientCtx, config)(params)
@@ -121,9 +129,8 @@ var createDbCallFn = function (getClient, config) {
          });
       })
       .catch(function (err) {
-         e.queryContext = err.queryContext;
-         e.message = err.message;
-         throw e;
+         err.stack = stack_trace;
+         throw err;
       });
    };
 
@@ -138,7 +145,11 @@ var Tiny = function (options) {
    this.pg = Pg;
 
    this.options = _.extend({
-      snake: false
+      snake: false,
+      error_transformer: function(err) {
+         return e;
+      },
+      result_transformer: _.identity,
    }, options);
 
    this.connect = Q.nbind(Pg.connect, Pg);

@@ -100,7 +100,7 @@ var parseFiles = function (rootDir) {
          var relative_path = f.substring(root.length);
 
          var data = {
-            name: relative_path.replace(/\W/ig, '_').replace('_', ''),
+            name: relative_path.replace(/[.]sql$/g, '').replace(/\W+/ig, '_'),
             path: f,
             relative_path: relative_path,
             text: Fs.readFileSync(f).toString()

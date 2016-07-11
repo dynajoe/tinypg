@@ -1,0 +1,21 @@
+{
+    "parserOptions": {
+        "ecmaVersion": 6,
+        "sourceType": "module",
+        "ecmaFeatures": {
+            "jsx": true
+        }
+    },
+    "rules": {
+        "semi": 2,
+        "comma-dangle": ["error", "always-multiline"],
+        "brace-style": ["error", "1tbs"],
+        "indent": ["error", 3],
+        "callback-return": ["error", ["callback", "cb", "next", "done"]]
+    },
+    "extends": "eslint:recommended",
+    "env": {
+      "node": true,
+      "mocha": true
+  }
+}

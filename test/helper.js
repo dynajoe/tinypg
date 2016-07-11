@@ -1,4 +1,4 @@
-var Tiny = require('../src/index')
+var Tiny = require('../src/index');
 var Q = require('q');
 var Pg = require('pg');
 var _ = require('lodash');
@@ -7,7 +7,7 @@ var dbSchema = module.exports.dbSchema = 'tiny_test_db';
 var connectionString = module.exports.connectionString = 'postgres://postgres@localhost:5432/';
 
 var dbQuery = module.exports.dbQuery = function () {
-   var args = Array.prototype.slice.call(arguments, 0)
+   var args = Array.prototype.slice.call(arguments, 0);
    args[0] = args[0].replace(/\{dbSchema\}/ig, dbSchema);
    var deferred = Q.defer();
 
@@ -19,7 +19,7 @@ var dbQuery = module.exports.dbQuery = function () {
 
       deferred.resolve({
          client: client,
-         done: done
+         done: done,
       });
    });
 
@@ -54,7 +54,7 @@ module.exports.setUpDb = function () {
       'DROP SCHEMA IF EXISTS {dbSchema} CASCADE;',
       'CREATE SCHEMA {dbSchema};',
       'SET search_path TO {dbSchema};',
-      'CREATE TABLE {dbSchema}.a (id serial PRIMARY KEY, text text UNIQUE);'
+      'CREATE TABLE {dbSchema}.a (id serial PRIMARY KEY, text text UNIQUE);',
    ];
 
    return commands.reduce(function (acc, c) {
@@ -67,6 +67,6 @@ module.exports.setUpDb = function () {
 module.exports.newTiny = function (options) {
    return new Tiny(_.extend({
       connection_string: connectionString,
-      root_dir: __dirname + '/sql/'
+      root_dir: __dirname + '/sql/',
    }, options));
 };

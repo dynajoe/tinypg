@@ -1,6 +1,4 @@
-var Tiny = require('../src/index');
 var Q = require('q');
-var Pg = require('pg');
 var expect = require('chai').expect;
 var setUpDb = require('./helper').setUpDb;
 var getA = require('./helper').getA;
@@ -26,7 +24,7 @@ describe('Transactions', function () {
 
             return Q.all(queries);
          })
-         .then(function (err) {
+         .then(function () {
             return getA().then(function (res) {
                expect(res.rows).to.have.length(3);
             });
@@ -36,13 +34,13 @@ describe('Transactions', function () {
       it('should rollback failed transactions', function () {
          return tiny.transaction(function (ctx) {
             return ctx.sql.a.insert({
-               text: 'TEST'
+               text: 'TEST',
             })
             .then(function () {
                throw new Error('THIS SHOULD ABORT');
             });
          })
-         .catch(function (err) {
+         .catch(function () {
             return getA().then(function (res) {
                expect(res.rows).to.have.length(0);
             });
@@ -54,10 +52,10 @@ describe('Transactions', function () {
       it('should commit successful transactions', function () {
          return tiny.transaction(function (ctx) {
             return ctx.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
-               text: 'TEST'
+               text: 'TEST',
             });
          })
-         .then(function (err) {
+         .then(function () {
             return getA().then(function (res) {
                expect(res.rows).to.have.length(1);
             });
@@ -67,13 +65,13 @@ describe('Transactions', function () {
       it('should rollback failed transactions', function () {
          return tiny.transaction(function (ctx) {
             return ctx.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
-               text: 'TEST'
+               text: 'TEST',
             })
             .then(function () {
                throw new Error('THIS SHOULD ABORT');
             });
          })
-         .catch(function (err) {
+         .catch(function () {
             return getA().then(function (res) {
                expect(res.rows).to.have.length(0);
             });
@@ -85,32 +83,32 @@ describe('Transactions', function () {
       it('should commit successful transactions', function () {
          return tiny.transaction(function (ctx) {
             return ctx.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
-               text: '1'
+               text: '1',
             })
-            .then(function (res) {
+            .then(function () {
                return ctx.transaction(function (ctx2) {
                   return ctx2.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
-                     text: '2'
+                     text: '2',
                   });
                });
             });
          })
-         .then(function (err) {
+         .then(function () {
             return getA().then(function (res) {
                expect(res.rows).to.have.length(2);
             });
-         })
+         });
       });
 
       it('should rollback on a failed inner transaction', function () {
          return tiny.transaction(function (ctx) {
             return ctx.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
-               text: '1'
+               text: '1',
             })
-            .then(function (res) {
+            .then(function () {
                return ctx.transaction(function (ctx2) {
                   return ctx2.query('INSERT INTO ' + dbSchema + '.a (text) VALUES (:text)', {
-                     text: '1'
+                     text: '1',
                   })
                   .then(function () {
                      throw new Error('THIS SHOULD ABORT');
@@ -118,7 +116,7 @@ describe('Transactions', function () {
                });
             });
          })
-         .catch(function (err) {
+         .catch(function () {
             return getA().then(function (res) {
                expect(res.rows).to.have.length(0);
             });

@@ -5,7 +5,7 @@ function test() {
    return gulp.src(['test/*.js'], { read: false })
    .pipe(mocha({
       R: 'spec',
-      env: {'NODE_ENV': 'test'}
+      env: {'NODE_ENV': 'test'},
    }));
 }
 

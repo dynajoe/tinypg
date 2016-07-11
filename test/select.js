@@ -40,8 +40,10 @@ describe('Tiny', function () {
             it('should isolate if asked', function () {
                var iso = tiny.isolatedEmitter();
 
-               var onQueryDataA, onResultDataA,
-                   onQueryDataB, onResultDataB;
+               var onQueryDataA;
+               var onResultDataA;
+               var onQueryDataB;
+               var onResultDataB;
 
                tiny.events.on('query', function (e) {
                   onQueryDataA = e;
@@ -61,11 +63,11 @@ describe('Tiny', function () {
 
                return iso.sql.a.select()
                .then(function (res) {
-                  expect(onQueryDataA).to.not.exist
-                  expect(onResultDataA).to.not.exist
+                  expect(onQueryDataA).to.not.exist;
+                  expect(onResultDataA).to.not.exist;
 
-                  expect(onQueryDataB).to.exist
-                  expect(onResultDataB).to.exist
+                  expect(onQueryDataB).to.exist;
+                  expect(onResultDataB).to.exist;
 
                   iso.dispose();
 
@@ -88,8 +90,8 @@ describe('Tiny', function () {
 
                return tiny.sql.a.select()
                .then(function (res) {
-                  expect(onQueryData).not.to.be.null
-                  expect(onResultData).not.to.be.null
+                  expect(onQueryData).not.to.be.null;
+                  expect(onResultData).not.to.be.null;
 
                   tiny.events.removeAllListeners();
 
@@ -241,9 +243,9 @@ describe('Tiny', function () {
 
       var tiny = new Tiny({
          connectionString: connectionString,
-         error_transformer: function (err) {
+         error_transformer: function () {
             return expectedError;
-         }
+         },
       });
 
       return tiny.query('SELECT THIS_WILL_THROW_ERROR;')
@@ -257,7 +259,7 @@ describe('Tiny', function () {
 
       var tiny = new Tiny({
          connectionString: connectionString,
-         result_transformer: function (results) {
+         result_transformer: function () {
             return expectedResults;
          }
       });

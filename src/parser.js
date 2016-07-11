@@ -26,7 +26,7 @@ var parseSql = function (sql) {
          varIdx++;
          keys[name] = {
             index: varIdx,
-            name: buffer.join('')
+            name: buffer.join(''),
          };
          mapping.push(keys[name]);
          result.push("$" + varIdx);
@@ -51,30 +51,29 @@ var parseSql = function (sql) {
       if (!multiLineComment && !singleLineComment && c === '\'' && p !== '\\') {
          inString = !inString;
       } else if (!inString && c === '-' && p === '-') {
-         singleLineComment = true
+         singleLineComment = true;
       } else if (singleLineComment && c === '\n') {
-         singleLineComment = false
+         singleLineComment = false;
       } else if (c === '*' && p === '/') {
-         multiLineComment++
+         multiLineComment++;
       } else if (c === '/' && p === '*') {
-         multiLineComment = Math.max(0, multiLineComment - 1)
+         multiLineComment = Math.max(0, multiLineComment - 1);
       }
 
-      ignoring = inString || singleLineComment || multiLineComment > 0
+      ignoring = inString || singleLineComment || multiLineComment > 0;
 
       if (ignoring) {
-         buffer.push(c)
+         buffer.push(c);
       } else {
          if (consumeVar && !validChar.test(c)) {
-            pushVar()
-         }
-         else if (c === ':' && p !== ':' && validStartChar.test(n)) {
+            pushVar();
+         } else if (c === ':' && p !== ':' && validStartChar.test(n)) {
             consumeVar = true;
-            pushText()
-            continue
+            pushText();
+            continue;
          }
 
-         buffer.push(c)
+         buffer.push(c);
       }
    }
 
@@ -82,12 +81,12 @@ var parseSql = function (sql) {
 
    return {
       transformed: result.join(''),
-      mapping: mapping
-   }
+      mapping: mapping,
+   };
 };
 
 var parseFiles = function (rootDir) {
-   var rootDirs = [].concat(rootDir)
+   var rootDirs = [].concat(rootDir);
 
    var result = _.flatMap(rootDirs, function (d) {
       var root = Path.resolve(d);
@@ -103,7 +102,7 @@ var parseFiles = function (rootDir) {
             name: relative_path.replace(/[.]sql$/g, '').replace(/\W+/ig, '_'),
             path: f,
             relative_path: relative_path,
-            text: Fs.readFileSync(f).toString()
+            text: Fs.readFileSync(f).toString(),
          };
 
          var result = parseSql(data.text);
@@ -119,14 +118,14 @@ var parseFiles = function (rootDir) {
    var conflicts = _.chain(result)
    .groupBy('name')
    .filter(function (x) {
-      return x.length > 1
+      return x.length > 1;
    })
-   .value()
+   .value();
 
    if (conflicts.length > 0) {
       var message = "Conflicting sql source paths found (" + conflicts.map(function (c) {
-         return c[0].relative_path
-      }).join(', ') + "). All source files under root dirs must have different relative paths."
+         return c[0].relative_path;
+      }).join(', ') + "). All source files under root dirs must have different relative paths.";
 
       throw new TinyPgError(message);
    }
@@ -136,5 +135,5 @@ var parseFiles = function (rootDir) {
 
 module.exports = {
    parseSql: parseSql,
-   parseFiles: parseFiles
+   parseFiles: parseFiles,
 };

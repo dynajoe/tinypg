@@ -37,12 +37,12 @@ var dbCall = function (clientCtx, config, stackTrace) {
          start: new Date().getTime(),
          name: name,
          context: clientCtx,
-      }
+      };
 
       return Q.fcall(function () {
          var values = config.mapping.map(function (m) {
             if (!_.has(inputParams, m.name)) {
-               throw new Error('Missing expected key [' + m.name + '] on input parameters.')
+               throw new Error('Missing expected key [' + m.name + '] on input parameters.');
             }
             return _.get(inputParams, m.name);
          });
@@ -54,12 +54,12 @@ var dbCall = function (clientCtx, config, stackTrace) {
             params = [{
                name: name,
                text: config.transformed,
-               values: values
+               values: values,
             }];
          } else {
             params = [
                config.transformed,
-               values
+               values,
             ];
          }
 
@@ -85,7 +85,7 @@ var dbCall = function (clientCtx, config, stackTrace) {
                return deferred.reject(err);
             }
 
-            data = clientCtx.db.options.result_transformer(data)
+            data = clientCtx.db.options.result_transformer(data);
             deferred.resolve(data);
          }));
 
@@ -112,12 +112,12 @@ var formatFn = function (config, getClient) {
       var newConfig = _.extend({}, config, {
          text: result,
          transformed: parsed.transformed,
-         mapping: parsed.mapping
+         mapping: parsed.mapping,
       });
 
       return {
          format: formatFn(newConfig, getClient),
-         query: createDbCallFn(getClient, newConfig)
+         query: createDbCallFn(getClient, newConfig),
       };
    };
 };
@@ -176,14 +176,14 @@ Tiny.prototype.isolatedEmitter = function () {
    var res = _.create(Tiny.prototype, _.extend({}, this, {
       events: new EventEmitter(),
       dispose: function () {
-         this.events.removeAllListeners()
-      }
+         this.events.removeAllListeners();
+      },
    }));
 
    setSql(res);
 
-   return res
-}
+   return res;
+};
 
 // Instance
 Tiny.prototype.query = function (query, params) {
@@ -207,7 +207,7 @@ Tiny.prototype.getClient = function () {
       return {
          client: client,
          done: done,
-         db: tiny
+         db: tiny,
       };
    });
 };
@@ -224,7 +224,7 @@ Tiny.prototype.transaction = function (txFn) {
       clientQuery = Q.nbind(pgClient.query, pgClient);
       return clientQuery('BEGIN');
    })
-   .then(function (res) {
+   .then(function () {
       // Create a new version of this instance of Tiny
       // with getClient overridden to provide same client
       var tinyOverride = _.create(_this, {
@@ -240,9 +240,9 @@ Tiny.prototype.transaction = function (txFn) {
                client: pgClient,
                db: tinyOverride,
                // done: Can be called several times
-               done: function () {}
+               done: function () {},
             };
-         })
+         }),
       });
 
       setSql(tinyOverride);
@@ -262,8 +262,7 @@ Tiny.prototype.transaction = function (txFn) {
 
       if (clientQuery) {
          return clientQuery('ROLLBACK').fin(throwErr);
-      }
-      else {
+      } else {
          throw err;
       }
    })

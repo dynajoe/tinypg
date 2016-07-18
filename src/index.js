@@ -74,6 +74,7 @@ var dbCall = function (clientCtx, config, stackTrace) {
 
             _.assign(queryContext, {
                end: now,
+               params: inputParams,
                duration: now - queryContext.start,
                error: err,
                data: data,

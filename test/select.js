@@ -93,6 +93,9 @@ describe('Tiny', function () {
                   expect(onQueryData).not.to.be.null;
                   expect(onResultData).not.to.be.null;
 
+                  expect(onQueryData.name).to.equal('a_select');
+                  expect(onQueryData.duration).to.be.least(0)
+
                   tiny.events.removeAllListeners();
 
                   expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }, { id: 2, text: 'b' }, { id: 3, text: 'c' }]);

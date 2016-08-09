@@ -29,13 +29,13 @@ var setSql = function (db) {
 
 var dbCall = function (clientCtx, config, stackTrace) {
    return function (inputParams) {
-      var name = (config.name ? config.name + '_' : '') + Util.hashCode(config.transformed).toString().replace('-', 'n');
+      const query_name = config.name || 'raw_query';
 
       var queryContext = {
          id: Uuid.v4(),
          sql: config.transformed,
          start: new Date().getTime(),
-         name: name,
+         name: query_name,
          context: clientCtx,
       };
 
@@ -52,7 +52,7 @@ var dbCall = function (clientCtx, config, stackTrace) {
 
          if (config.prepared) {
             params = [{
-               name: name,
+               name: query_name + '_' + Util.hashCode(config.transformed).toString().replace('-', 'n'),
                text: config.transformed,
                values: values,
             }];

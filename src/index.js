@@ -16,7 +16,7 @@ var setSql = function (db) {
    for (var x in db.callConfigs) {
       var config = db.callConfigs[x];
       var p = Path.parse(config.relative_path);
-      var key = p.dir.split(Path.sep).concat(p.name).slice(1);
+      var key = p.dir.split(Path.sep).concat(p.name);
       config.prepared = db.options.prepared;
 
       var callFn = createDbCallFn(db.getClient.bind(db), config);

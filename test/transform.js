@@ -1,5 +1,6 @@
 var Parser = require('../src/parser');
 var expect = require('chai').expect;
+var Path = require('path')
 
 describe('transform', function () {
    var ctx;
@@ -140,3 +141,11 @@ describe('transform', function () {
       });
    })
 });
+
+describe('parseFiles', () => {
+   it('should parse files', () => {
+      const result = Parser.parseFiles(Path.join(__dirname, './multi/a_sql'))
+      expect(result[0].name).to.equal('a_insert')
+      expect(result[0].relative_path).to.equal('a/insert.sql')
+   })
+})

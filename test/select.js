@@ -126,6 +126,9 @@ describe('Tiny', function () {
                   return tiny.sql.a.testMissingParams({
                      a: 'a'
                   })
+                  .then(() => {
+                     throw new Error('Did not throw expected error')
+                  })
                   .catch(function (err) {
                      expect(err).to.be.instanceof(Util.TinyPgError);
                      expect(err).to.have.property('queryContext');
@@ -163,6 +166,9 @@ describe('Tiny', function () {
             describe('that throws an error', function () {
                it('should wrap the error with the queryContext', function () {
                   return tiny.sql.a.queryWithError()
+                  .then(() => {
+                     throw new Error('Did not throw expected error')
+                  })
                   .catch(function (err) {
                      expect(err).to.be.instanceof(Util.TinyPgError);
                      expect(err).to.have.property('queryContext');
@@ -174,6 +180,9 @@ describe('Tiny', function () {
                it('should have the correct stack trace', function () {
                   var thisShouldBeInStack = function () {
                      return tiny.sql.a.queryWithError()
+                     .then(() => {
+                        throw new Error('Did not throw expected error')
+                     })
                      .catch(function (err) {
                         expect(err.stack).to.include('queryWithError');
                         expect(err.stack).to.include('thisShouldBeInStack');
@@ -196,6 +205,9 @@ describe('Tiny', function () {
             describe('When an error is thrown', function () {
                it('should have appropriate metadata', function () {
                   return tiny.query('SELECT THIS_WILL_THROW_ERROR;')
+                  .then(() => {
+                     throw new Error('Did not throw expected error')
+                  })
                   .catch(function (err) {
                      expect(err).to.be.instanceof(Util.TinyPgError);
                      expect(err).to.have.property('queryContext');
@@ -207,6 +219,9 @@ describe('Tiny', function () {
                it('should have the correct stack trace', function () {
                   var thisShouldBeInStack = function () {
                      return tiny.query('SELECT THIS_WILL_THROW_ERROR;')
+                     .then(() => {
+                        throw new Error('Did not throw expected error')
+                     })
                      .catch(function (err) {
                         expect(err.stack).to.include('thisShouldBeInStack');
                      });
@@ -222,6 +237,42 @@ describe('Tiny', function () {
    tests('Raw Statements');
 
    tests('Prepared Statements', { prepared: true });
+
+   describe('with shallow parameters', function () {
+      it('should report the extra parameters', function () {
+         var tiny = new Tiny({
+            connectionString: connectionString,
+         });
+
+         return tiny.query('Select 1', { unused_key: 'a' })
+         .then(() => {
+            throw new Error('Did not throw expected error')
+         })
+         .catch(function (err) {
+            expect(err).to.be.instanceof(Util.TinyPgError);
+            expect(err).to.have.property('queryContext');
+            expect(err.message).to.include('unused_key');
+         });
+      });
+   })
+
+   describe('with nested parameters', function () {
+      it('should report the extra parameters', function () {
+         var tiny = new Tiny({
+            connectionString: connectionString,
+         });
+
+         return tiny.query('Select 1', { unused_key1: { unused_key2: 'a' } })
+         .then(() => {
+            throw new Error('Did not throw expected error')
+         })
+         .catch(function (err) {
+            expect(err).to.be.instanceof(Util.TinyPgError);
+            expect(err).to.have.property('queryContext');
+            expect(err.message).to.include('unused_key1');
+         });
+      });
+   })
 
    it('should allow creating an instance of tiny without directory', function () {
       var tiny = new Tiny({
@@ -245,6 +296,9 @@ describe('Tiny', function () {
       });
 
       return tiny.query('SELECT THIS_WILL_THROW_ERROR;')
+      .then(() => {
+         throw new Error('Did not throw expected error')
+      })
       .catch(function (err) {
          expect(err).to.deep.equal(expectedError);
       });

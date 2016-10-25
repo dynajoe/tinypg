@@ -28,7 +28,7 @@ var setSql = function (db) {
 };
 
 var dbCall = function (clientCtx, config, stackTrace) {
-   return function (inputParams) {
+   return function (inputParams, strict) {
       return Q.fcall(function () {
          var values = config.mapping.map(function (m) {
             if (!_.has(inputParams, m.name)) {
@@ -36,6 +36,12 @@ var dbCall = function (clientCtx, config, stackTrace) {
             }
             return _.get(inputParams, m.name);
          });
+
+         _(inputParams).keys().forEach(function (param) {
+            if (_.isNil(_.find(config.mapping, function (m) { return _.split(m.name, /[.\[\]]/)[0] === param }))) {
+               throw new Error('Unused key [' + param + '] in input parameters.')
+            }
+         })
 
          var deferred = Q.defer();
          var name = (config.name ? config.name + '_' : '') + Util.hashCode(config.transformed).toString().replace('-', 'n');

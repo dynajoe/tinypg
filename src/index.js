@@ -39,7 +39,11 @@ var dbCall = function (clientCtx, config, stackTraceAccessor) {
          context: clientCtx,
       };
 
-      const prepared_name = (query_name + '_' + Util.hashCode(config.transformed).toString().replace('-', 'n')).substring(0, 64);
+      var prepared_name = null;
+
+      if (config.prepared) {
+         prepared_name = (query_name + '_' + Util.hashCode(config.transformed).toString().replace('-', 'n')).substring(0, 64);
+      }
 
       return Q.fcall(function () {
          var values = config.mapping.map(function (m) {

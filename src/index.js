@@ -27,7 +27,7 @@ var setSql = function (db) {
    db.sql = sqlObj;
 };
 
-var dbCall = function (clientCtx, config, stackTrace) {
+var dbCall = function (clientCtx, config, stackTraceAccessor) {
    return function (inputParams) {
       const query_name = config.name || 'raw_query';
 
@@ -38,6 +38,8 @@ var dbCall = function (clientCtx, config, stackTrace) {
          name: query_name,
          context: clientCtx,
       };
+
+      const prepared_name = (query_name + '_' + Util.hashCode(config.transformed).toString().replace('-', 'n')).substring(0, 64);
 
       return Q.fcall(function () {
          var values = config.mapping.map(function (m) {
@@ -52,7 +54,7 @@ var dbCall = function (clientCtx, config, stackTrace) {
 
          if (config.prepared) {
             params = [{
-               name: query_name + '_' + Util.hashCode(config.transformed).toString().replace('-', 'n'),
+               name: prepared_name,
                text: config.transformed,
                values: values,
             }];
@@ -97,7 +99,7 @@ var dbCall = function (clientCtx, config, stackTrace) {
 
          tinyError.message = err.message;
          tinyError.queryContext = _.omit(queryContext, 'context');
-         tinyError.stack = stackTrace;
+         tinyError.stack = stackTraceAccessor.stack;
 
          throw clientCtx.db.options.error_transformer(tinyError);
       });

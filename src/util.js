@@ -47,7 +47,11 @@ module.exports.TinyPgError = function TinyPgError(message) {
 };
 
 module.exports.captureStackTrace = function () {
-   var e = new Error();
-   Error.captureStackTrace(e, arguments.callee);
-   return e.stack;
+   var context = {};
+   var error = new Error();
+   Object.defineProperty(context, 'stack', {
+      get() { return error.stack.replace(/\s+at .+\.captureStackTrace/, ''); }
+   });
+   return context;
 };
+

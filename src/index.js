@@ -42,7 +42,7 @@ var dbCall = function (clientCtx, config, stackTraceAccessor) {
       var prepared_name = null;
 
       if (config.prepared) {
-         prepared_name = (query_name + '_' + Util.hashCode(config.transformed).toString().replace('-', 'n')).substring(0, 64);
+         prepared_name = (query_name + '_' + Util.hashCode(config.transformed).toString().replace('-', 'n')).substring(0, 63);
       }
 
       return Q.fcall(function () {

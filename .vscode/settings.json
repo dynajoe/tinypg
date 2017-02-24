@@ -1,0 +1,15 @@
+{
+    "files.exclude": {
+        "src/**/*.js": true,
+        "src/**/*.js.map": true,
+        "node_modules": true,
+        "node_shrinkwrap": true
+    },
+
+    "search.exclude": {
+        "src/**/*.js": true,
+        "src/**/*.js.map": true
+    }
+,
+"typescript.tsdk": "./node_modules/typescript/lib"
+}

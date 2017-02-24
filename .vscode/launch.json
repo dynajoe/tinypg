@@ -1,0 +1,28 @@
+{
+   // Use IntelliSense to learn about possible Node.js debug attributes.
+   // Hover to view descriptions of existing attributes.
+   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+   "version": "0.2.0",
+   "configurations": [
+      {
+         "type": "node",
+         "request": "launch",
+         "name": "Test via NPM",
+         "runtimeExecutable": "npm",
+         "windows": {
+            "runtimeExecutable": "npm.cmd"
+         },
+         "env": {
+            "SKIP_LINT": "true",
+            "MOCHA_BAIL": "false"
+         },
+         "runtimeArgs": [
+            "run-script",
+            "test-debugging"
+         ],
+         "port": 5858,
+         "cwd": "${workspaceRoot}",
+         "timeout": 60000
+      }
+   ]
+}

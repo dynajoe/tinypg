@@ -1,140 +1,114 @@
-var Fs = require('fs');
-var Glob = require('glob');
-var Path = require('path');
-var _ = require('lodash');
-var TinyPgError = require('./util').TinyPgError;
-
-var parseSql = function (sql) {
-   var consumeVar = false;
-   var inString = false;
-   var validStartChar = /\w/;
-   var validChar = /(\w|\.)/;
-   var buffer = [];
-   var result = [];
-   var mapping = [];
-   var keys = {};
-   var varIdx = 0;
-   var singleLineComment = false;
-   var multiLineComment = 0;
-
-   var pushVar = function () {
-      var name = buffer.join('');
-
-      if (keys[name]) {
-         result.push("$" + keys[name].index);
-      } else {
-         varIdx++;
-         keys[name] = {
-            index: varIdx,
-            name: buffer.join(''),
-         };
-         mapping.push(keys[name]);
-         result.push("$" + varIdx);
-      }
-
-      buffer = [];
-      consumeVar = false;
-   };
-
-   var pushText = function () {
-      result.push(buffer.join(''));
-      buffer = [];
-   };
-
-   var ignoring = false;
-
-   for (var i = 0; i < sql.length; i++) {
-      var c = sql[i];
-      var n = sql[i + 1];
-      var p = sql[i - 1];
-
-      if (!multiLineComment && !singleLineComment && c === '\'' && p !== '\\') {
-         inString = !inString;
-      } else if (!inString && c === '-' && p === '-') {
-         singleLineComment = true;
-      } else if (singleLineComment && c === '\n') {
-         singleLineComment = false;
-      } else if (c === '*' && p === '/') {
-         multiLineComment++;
-      } else if (c === '/' && p === '*') {
-         multiLineComment = Math.max(0, multiLineComment - 1);
-      }
-
-      ignoring = inString || singleLineComment || multiLineComment > 0;
-
-      if (ignoring) {
-         buffer.push(c);
-      } else {
-         if (consumeVar && !validChar.test(c)) {
-            pushVar();
-         } else if (c === ':' && p !== ':' && validStartChar.test(n)) {
-            consumeVar = true;
-            pushText();
-            continue;
-         }
-
-         buffer.push(c);
-      }
-   }
-
-   consumeVar ? pushVar() : pushText();
-
-   return {
-      transformed: result.join(''),
-      mapping: mapping,
-   };
-};
-
-var parseFiles = function (rootDir) {
-   var rootDirs = [].concat(rootDir);
-
-   var result = _.flatMap(rootDirs, function (d) {
-      var root = Path.resolve(d);
-      var searchPath = Path.join(root, './**/*.sql');
-      var files = Glob.sync(searchPath);
-      var sqlFiles = [];
-
-      for (var i = 0; i < files.length; i++) {
-         var f = files[i];
-         var relative_path = f.substring(root.length + 1);
-         var sql_name = relative_path.replace(/[.]sql$/g, '').replace(/\W+/ig, '_').replace(/(^_)|(_$)/g, '');
-
-         var data = {
-            name: sql_name,
-            path: f,
-            relative_path: relative_path,
-            text: Fs.readFileSync(f).toString().trim(),
-         };
-
-         var result = parseSql(data.text);
-         data.transformed = result.transformed;
-         data.mapping = result.mapping;
-
-         sqlFiles.push(data);
-      }
-
-      return sqlFiles;
-   });
-
-   var conflicts = _.chain(result)
-   .groupBy('name')
-   .filter(function (x) {
-      return x.length > 1;
-   })
-   .value();
-
-   if (conflicts.length > 0) {
-      var message = "Conflicting sql source paths found (" + conflicts.map(function (c) {
-         return c[0].relative_path;
-      }).join(', ') + "). All source files under root dirs must have different relative paths.";
-
-      throw new TinyPgError(message);
-   }
-
-   return result;
-};
-
-module.exports = {
-   parseSql: parseSql,
-   parseFiles: parseFiles,
-};
+"use strict";
+const T = require("./types");
+const _ = require("lodash");
+const Fs = require("fs");
+const Path = require("path");
+const Glob = require('glob');
+function parseSql(sql) {
+    const validStartChar = /\w/;
+    const validChar = /(\w|\.)/;
+    const result = [];
+    const mapping = [];
+    const keys = {};
+    let singleLineComment = false;
+    let multiLineComment = 0;
+    let consumeVar = false;
+    let buffer = [];
+    let varIdx = 0;
+    let inString = false;
+    const pushVar = () => {
+        const name = buffer.join('');
+        if (keys[name]) {
+            result.push(`$${keys[name].index}`);
+        }
+        else {
+            varIdx++;
+            keys[name] = {
+                index: varIdx,
+                name: buffer.join(''),
+            };
+            mapping.push(keys[name]);
+            result.push(`$${varIdx}`);
+        }
+        buffer = [];
+        consumeVar = false;
+    };
+    const pushText = () => {
+        result.push(buffer.join(''));
+        buffer = [];
+    };
+    for (let i = 0; i < sql.length; i++) {
+        const c = sql[i];
+        const n = sql[i + 1];
+        const p = sql[i - 1];
+        if (!multiLineComment && !singleLineComment && c === '\'' && p !== '\\') {
+            inString = !inString;
+        }
+        else if (!inString && c === '-' && p === '-') {
+            singleLineComment = true;
+        }
+        else if (singleLineComment && c === '\n') {
+            singleLineComment = false;
+        }
+        else if (c === '*' && p === '/') {
+            multiLineComment++;
+        }
+        else if (c === '/' && p === '*') {
+            multiLineComment = Math.max(0, multiLineComment - 1);
+        }
+        if (inString || singleLineComment || multiLineComment > 0) {
+            buffer.push(c);
+        }
+        else {
+            if (consumeVar && !validChar.test(c)) {
+                pushVar();
+            }
+            else if (c === ':' && p !== ':' && validStartChar.test(n)) {
+                consumeVar = true;
+                pushText();
+                continue;
+            }
+            buffer.push(c);
+        }
+    }
+    consumeVar ? pushVar() : pushText();
+    return {
+        parameterized_sql: result.join(''),
+        mapping: mapping,
+    };
+}
+exports.parseSql = parseSql;
+function parseFiles(root_directories, path_transformer) {
+    const result = _.flatMap(root_directories, (root_dir) => {
+        const root_path = Path.resolve(root_dir);
+        const glob_pattern = Path.join(root_path, './**/*.sql');
+        const files = Glob.sync(glob_pattern);
+        return _.map(files, f => {
+            const relative_path = f.substring(root_path.length + 1);
+            const path = Path.parse(relative_path);
+            const file_contents = Fs.readFileSync(f).toString().trim();
+            const path_parts = _.map(path.dir.split(Path.sep).concat(path.name), path_transformer);
+            const sql_name = path_parts.join('_');
+            const sql_key = path_parts.join('.');
+            return {
+                name: sql_name,
+                key: sql_key,
+                path: f,
+                relative_path,
+                text: file_contents,
+                path_parts,
+                parsed: parseSql(file_contents),
+            };
+        });
+    });
+    const conflicts = _.filter(_.groupBy(result, x => x.name), x => x.length > 1);
+    if (conflicts.length > 0) {
+        const message = `Conflicting sql source paths found (${_.map(conflicts, c => {
+            return c[0].relative_path;
+        }).join(', ')}). All source files under root dirs must have different relative paths.`;
+        throw new T.TinyPgError(message);
+    }
+    return result;
+}
+exports.parseFiles = parseFiles;
+//# sourceMappingURL=parser.js.map

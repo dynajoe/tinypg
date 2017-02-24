@@ -10,3 +10,8 @@ insert_final_newline = true
 
 [*.md]
 trim_trailing_whitespace = false
+indent_size = 4
+
+[*.sql]
+trim_trailing_whitespace = true
+indent_size = 3

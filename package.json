@@ -3,8 +3,18 @@
   "version": "1.1.2",
   "description": "Easy way to call sql files using postgres.",
   "main": "index.js",
+  "config": {
+    "reporter": "spec",
+    "reporter_options": ""
+  },
+  "typescript": {
+    "definition": "index.d.ts"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm run build && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --full-trace -t 15000 $MOCHA_FLAGS --require source-map-support/register --reporter $npm_package_config_reporter $npm_package_config_reporter_options",
+    "test-debugging": "npm run build && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --debug-brk=5858 --no-timeouts --colors --full-trace -t 15000 $MOCHA_FLAGS --require source-map-support/register",
+    "clean": "rimraf 'src/**/*.js' 'src/**/*.map'",
+    "build": "npm run clean && tsc"
   },
   "repository": {
     "type": "git",
@@ -30,14 +40,19 @@
     "glob": "^6.0.1",
     "lodash": "4.0.0",
     "node-uuid": "^1.4.7",
-    "pg": "^4.4.3",
-    "pg-format": "^1.0.1",
-    "q": "^1.4.1"
+    "pg": "6.1.2",
+    "pg-format": "^1.0.1"
   },
   "devDependencies": {
+    "@types/chai": "3.4.34",
+    "@types/lodash": "4.14.52",
+    "@types/mocha": "2.2.39",
+    "@types/node": "7.0.5",
+    "@types/pg": "6.1.36",
     "chai": "^3.4.1",
-    "gulp": "^3.9.0",
-    "gulp-spawn-mocha": "^2.2.2",
-    "mocha": "^2.3.4"
+    "mocha": "^3.2.0",
+    "rimraf": "^2.6.0",
+    "source-map-support": "0.4.11",
+    "typescript": "2.1.5"
   }
 }

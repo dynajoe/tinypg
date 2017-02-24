@@ -1,1 +1,0 @@
-SELECT * FROM %I WHERE text = :a

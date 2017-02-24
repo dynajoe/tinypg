@@ -32,18 +32,18 @@ describe('Tiny', () => {
       it('should isolate if asked', () => {
          const iso = tiny.isolatedEmitter()
 
-         let onQueryDataA
-         let onResultDataA
-         let onQueryDataB
-         let onResultDataB
+         let onQueryDataA: any
+         let onResultDataA: any
+         let onQueryDataB: any
+         let onResultDataB: any
 
-         tiny.events.on('query', e => { onQueryDataA = e })
+         tiny.events.on('query', (e: any) => { onQueryDataA = e })
 
-         tiny.events.on('result', e => { onResultDataA = e })
+         tiny.events.on('result', (e: any) => { onResultDataA = e })
 
-         iso.events.on('query', e => { onQueryDataB = e })
+         iso.events.on('query', (e: any) => { onQueryDataB = e })
 
-         iso.events.on('result', e => { onResultDataB = e })
+         iso.events.on('result', (e: any) => { onResultDataB = e })
 
          return iso.sql('a.select')
          .then(res => {
@@ -66,12 +66,12 @@ describe('Tiny', () => {
       })
 
       it('should emit events', () => {
-         let onQueryData
-         let onResultData
+         let onQueryData: any
+         let onResultData: any
 
-         tiny.events.on('query', e => { onQueryData = e })
+         tiny.events.on('query', (e: any) => { onQueryData = e })
 
-         tiny.events.on('result', e => { onResultData = e })
+         tiny.events.on('result', (e: any) => { onResultData = e })
 
          return tiny.sql('a.select')
          .then(res => {

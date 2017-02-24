@@ -12,7 +12,7 @@ const PgFormat = require('pg-format')
 
 const TINYPG_LOG = process.env.TINYPG_LOG === 'true'
 
-Pg.defaults['poolLog'] = TINYPG_LOG ? m => { console.log(`PG: ${m}`) } : _.identity
+Pg.defaults['poolLog'] = TINYPG_LOG ? (m: any) => { console.log(`PG: ${m}`) } : _.identity
 
 export class TinyPg {
    options: T.TinyPgOptions
@@ -31,7 +31,7 @@ export class TinyPg {
 
       this.events = new EventEmitter()
 
-      const params = Url.parse(options.connection_string, true)
+      const params = Url.parse(<string> options.connection_string, true)
       const auth = params.auth.split(':')
 
       const pool_config: Pg.PoolConfig = {
@@ -121,7 +121,7 @@ export class TinyPg {
             const unreleasable_client = _.create(transaction_context, tiny_client_overrides)
 
             const tiny_overrides: Partial<TinyPg> = {
-               transaction: f => {
+               transaction: (f: (db: TinyPg) => Promise<T>) => {
                   TINYPG_LOG && console.log('TINYPG: inner transaction')
                   return f(tiny_tx)
                },
@@ -171,13 +171,15 @@ export class TinyPg {
    }
 
    isolatedEmitter(): T.Disposable & TinyPg {
+      const new_event_emitter = new EventEmitter()
+
       const tiny_overrides: Partial<TinyPg> = {
-         events: new EventEmitter(),
+         events: new_event_emitter,
       }
 
       return _.create(TinyPg.prototype, _.extend<T.Disposable>({
-         dispose: function () {
-            this.events.removeAllListeners()
+         dispose: () => {
+            new_event_emitter.removeAllListeners()
          },
       }, this, tiny_overrides))
    }
@@ -199,7 +201,7 @@ export class TinyPg {
 
          this.events.emit('query', query_context)
 
-         const callComplete = (error, data) => {
+         const callComplete = (error: Error, data: T.Result<T>) => {
             client.release()
 
             const end_at = Date.now()
@@ -303,10 +305,10 @@ export class FormattableDbCall {
 
    static pg: any = Pg
 
-   static pgDefaults = obj => {
+   static pgDefaults = (obj: any) => {
       for (let k in obj) {
          if (obj.hasOwnProperty(k)) {
-            Pg.defaults[k] = obj[k]
+            (<any>Pg.defaults)[k] = obj[k]
          }
       }
    }

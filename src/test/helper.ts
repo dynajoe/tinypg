@@ -3,7 +3,7 @@ import * as Pg from 'pg'
 
 export const connection_string = 'postgres://postgres@localhost:5432/?sslmode=disable'
 
-export function dbQuery(query, args: any[] = null): Promise<Pg.QueryResult> {
+export function dbQuery(query: string, args: any[] = null): Promise<Pg.QueryResult> {
    const query_promise = new Promise((resolve, reject) => {
       Pg.connect(connection_string, (err, client, done) => {
          if (err) {

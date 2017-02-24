@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+        "declaration": true,
         "target": "ES6",
         "module": "commonjs",
         "sourceMap": true,
@@ -13,7 +14,7 @@
         "forceConsistentCasingInFileNames": true,
         "noFallthroughCasesInSwitch": true,
         "noUnusedLocals": true,
-        "noUnusedParameters": false
+        "noUnusedParameters": true
     },
     "compileOnSave": false,
     "filesGlob": [

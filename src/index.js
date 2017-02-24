@@ -18,7 +18,7 @@ const Case = require('case');
 const Uuid = require('node-uuid');
 const PgFormat = require('pg-format');
 const TINYPG_LOG = process.env.TINYPG_LOG === 'true';
-Pg.defaults['poolLog'] = TINYPG_LOG ? m => { console.log(`PG: ${m}`); } : _.identity;
+Pg.defaults['poolLog'] = TINYPG_LOG ? (m) => { console.log(`PG: ${m}`); } : _.identity;
 class TinyPg {
     constructor(options) {
         this.options = __assign({ snake: false, error_transformer: _.identity, root_dir: [] }, options);
@@ -94,7 +94,7 @@ class TinyPg {
                 };
                 const unreleasable_client = _.create(transaction_context, tiny_client_overrides);
                 const tiny_overrides = {
-                    transaction: f => {
+                    transaction: (f) => {
                         TINYPG_LOG && console.log('TINYPG: inner transaction');
                         return f(tiny_tx);
                     },
@@ -139,12 +139,13 @@ class TinyPg {
         });
     }
     isolatedEmitter() {
+        const new_event_emitter = new events_1.EventEmitter();
         const tiny_overrides = {
-            events: new events_1.EventEmitter(),
+            events: new_event_emitter,
         };
         return _.create(TinyPg.prototype, _.extend({
-            dispose: function () {
-                this.events.removeAllListeners();
+            dispose: () => {
+                new_event_emitter.removeAllListeners();
             },
         }, this, tiny_overrides));
     }
@@ -234,7 +235,7 @@ class FormattableDbCall {
     }
 }
 FormattableDbCall.pg = Pg;
-FormattableDbCall.pgDefaults = obj => {
+FormattableDbCall.pgDefaults = (obj) => {
     for (let k in obj) {
         if (obj.hasOwnProperty(k)) {
             Pg.defaults[k] = obj[k];

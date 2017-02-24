@@ -42,7 +42,7 @@ export interface SqlFile {
 
 export interface DbCallConfig {
    name: string
-   key: string
+   key: string | null
    parameter_map: ParamMapping[]
    parameterized_query: string
    text: string

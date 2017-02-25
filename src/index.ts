@@ -233,7 +233,7 @@ export class TinyPg {
    }
 }
 
-export class DbCall {
+class DbCall {
    config: T.DbCallConfig
    prepared_name?: string
 
@@ -274,7 +274,7 @@ export class DbCall {
    }
 }
 
-export class FormattableDbCall {
+class FormattableDbCall {
    db: TinyPg
    db_call: DbCall
 
@@ -315,4 +315,3 @@ export class FormattableDbCall {
 }
 
 export default TinyPg
-

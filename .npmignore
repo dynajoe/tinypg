@@ -1,2 +1,4 @@
-sql/
-.vscode/
+*
+!dist/**/*
+!package.json
+!*.md

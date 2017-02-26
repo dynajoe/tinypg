@@ -1,5 +1,11 @@
 import * as T from './types'
 
+export const LogEnabled = process.env.TINYPG_LOG === 'true'
+
+export function Log(msg: string, ...args: any[]) {
+   console.log(msg, ...args)
+}
+
 export function hashCode(str: string): number {
    let hash = 0
 

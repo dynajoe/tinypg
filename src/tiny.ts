@@ -9,9 +9,9 @@ import * as Url from 'url'
 const Uuid = require('node-uuid')
 const PgFormat = require('pg-format')
 
-const TINYPG_LOG = process.env.TINYPG_LOG === 'true'
+const TINYPG_LOG = Util.LogEnabled
 
-Pg.defaults['poolLog'] = TINYPG_LOG ? (m: any) => { console.log(`PG: ${m}`) } : _.noop
+Pg.defaults['poolLog'] = TINYPG_LOG ? (m: any) => { Util.Log(`${m}`) } : _.noop
 
 export class TinyPg {
    options: T.TinyPgOptions
@@ -60,7 +60,7 @@ export class TinyPg {
    query<T>(raw_sql: string, params: Object = {}): Promise<T.Result<T>> {
       const stack_trace_accessor = Util.stackTraceAccessor()
 
-      TINYPG_LOG && console.log('TINYPG: query')
+      TINYPG_LOG && Util.Log('query')
       return Promise.resolve()
       .then(() => {
          const parsed = P.parseSql(raw_sql)
@@ -81,7 +81,7 @@ export class TinyPg {
    sql<T>(name: string, params: Object = {}): Promise<T.Result<T>> {
       const stack_trace_accessor = Util.stackTraceAccessor()
 
-      TINYPG_LOG && console.log('TINYPG: sql', name)
+      TINYPG_LOG && Util.Log('sql', name)
       const db_call: DbCall = this.sql_db_calls[name]
 
       if (_.isNil(db_call)) {
@@ -102,47 +102,51 @@ export class TinyPg {
    }
 
    transaction<T>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T> {
-      TINYPG_LOG && console.log('TINYPG: transaction')
+      TINYPG_LOG && Util.Log('transaction')
       return this.getClient()
       .then(tx_client => {
-         TINYPG_LOG && console.log('TINYPG: BEGIN transaction')
+         TINYPG_LOG && Util.Log('BEGIN transaction')
+
+         const release_ref = tx_client.release
+         tx_client.release = () => { }
+
+         const release = () => {
+            TINYPG_LOG && Util.Log('release transaction client')
+            tx_client.release = release_ref
+            tx_client.release()
+         }
+
          return tx_client.query('BEGIN')
          .then(() => {
-            const unreleasable_client = new Proxy(tx_client, {})
-
-            unreleasable_client.release = () => {}
-
-            const tiny_tx = new Proxy(this, {})
+            const tiny_tx = Object.create(this)
 
             tiny_tx.transaction = (f) => {
-               TINYPG_LOG && console.log('TINYPG: inner transaction')
+               TINYPG_LOG && Util.Log('inner transaction')
                return f(tiny_tx)
             }
 
             tiny_tx.getClient = () => {
-               TINYPG_LOG && console.log('TINYPG: getClient (transaction)')
-               return Promise.resolve(unreleasable_client)
+               TINYPG_LOG && Util.Log('getClient (transaction)')
+               return Promise.resolve(tx_client)
             }
 
             return tx_fn(tiny_tx)
             .then(result => {
-               TINYPG_LOG && console.log('TINYPG: COMMIT transaction')
+               TINYPG_LOG && Util.Log('COMMIT transaction')
                return tx_client.query('COMMIT')
                .then(() => {
-                  TINYPG_LOG && console.log('TINYPG: release transaction client')
-                  tx_client.release()
+                  release()
                   return result
                })
             })
          })
          .catch(error => {
             const releaseAndThrow = () => {
-               TINYPG_LOG && console.log('TINYPG: release transaction client')
-               tx_client.release()
+               release()
                throw error
             }
 
-            TINYPG_LOG && console.log('TINYPG: ROLLBACK transaction')
+            TINYPG_LOG && Util.Log('ROLLBACK transaction')
             return tx_client.query('ROLLBACK')
             .then(releaseAndThrow)
             .catch(releaseAndThrow)
@@ -151,7 +155,7 @@ export class TinyPg {
    }
 
    getClient(): Promise<Pg.Client> {
-      TINYPG_LOG && console.log('TINYPG: getClient')
+      TINYPG_LOG && Util.Log('getClient')
       return this.pool.connect()
    }
 
@@ -170,7 +174,7 @@ export class TinyPg {
    }
 
    performDbCall<T>(stack_trace_accessor: T.StackTraceAccessor, db_call: DbCall, params: Object) {
-      TINYPG_LOG && console.log('TINYPG: performDbCall', db_call.config.name)
+      TINYPG_LOG && Util.Log('performDbCall', db_call.config.name)
 
       return this.getClient()
       .then((client: Pg.Client) => {
@@ -233,7 +237,7 @@ export class DbCall {
    execute<T>(client: Pg.Client, params: Object): Promise<T.Result<T>> {
       return Promise.resolve()
       .then(() => {
-         TINYPG_LOG && console.log('TINYPG: executing', this.config.name)
+         TINYPG_LOG && Util.Log('executing', this.config.name)
 
          const values: any[] = _.map(this.config.parameter_map, m => {
             if (!_.has(params, m.name)) {
@@ -249,7 +253,7 @@ export class DbCall {
 
          return query
          .then((query_result: Pg.QueryResult): T.Result<T> => {
-            TINYPG_LOG && console.log('TINYPG: execute result', this.config.name)
+            TINYPG_LOG && Util.Log('execute result', this.config.name)
             return {
                ...query_result,
                rows: query_result.rows,

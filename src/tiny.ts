@@ -6,24 +6,22 @@ import * as Util from './util'
 import { EventEmitter } from 'events'
 import * as Url from 'url'
 
-const Case = require('case')
 const Uuid = require('node-uuid')
 const PgFormat = require('pg-format')
 
 const TINYPG_LOG = process.env.TINYPG_LOG === 'true'
 
-Pg.defaults['poolLog'] = TINYPG_LOG ? (m: any) => { console.log(`PG: ${m}`) } : _.identity
+Pg.defaults['poolLog'] = TINYPG_LOG ? (m: any) => { console.log(`PG: ${m}`) } : _.noop
 
 export class TinyPg {
    options: T.TinyPgOptions
    pool: Pg.Pool
    sql_files: T.SqlFile[]
    events: EventEmitter
-   sql_db_calls: _.Dictionary<DbCall>
+   sql_db_calls: { [key: string]: DbCall }
 
    constructor(options: Partial<T.TinyPgOptions>) {
       this.options = <T.TinyPgOptions> {
-         snake: false,
          error_transformer: _.identity,
          root_dir: [],
          ...options
@@ -45,11 +43,7 @@ export class TinyPg {
 
       this.pool = new Pg.Pool(pool_config)
 
-      const path_transformer = this.options.snake
-         ? Case.snake.bind(Case)
-         : Case.camel.bind(Case)
-
-      this.sql_files = P.parseFiles([].concat(this.options.root_dir), path_transformer)
+      this.sql_files = P.parseFiles([].concat(this.options.root_dir))
 
       this.sql_db_calls = _.keyBy(_.map(this.sql_files, sql_file => {
          return new DbCall({

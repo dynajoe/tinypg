@@ -85,7 +85,7 @@ export function parseSql(sql: string): T.SqlParseResult {
    }
 }
 
-export function parseFiles(root_directories: string[], path_transformer: (p: string) => string): T.SqlFile[] {
+export function parseFiles(root_directories: string[]): T.SqlFile[] {
    const result = _.flatMap(root_directories, (root_dir): T.SqlFile[] => {
       const root_path: string = Path.resolve(root_dir)
       const glob_pattern: string = Path.join(root_path, './**/*.sql')
@@ -95,8 +95,8 @@ export function parseFiles(root_directories: string[], path_transformer: (p: str
          const relative_path = f.substring(root_path.length + 1)
          const path = Path.parse(relative_path)
 
-         const file_contents = Fs.readFileSync(f).toString().trim()
-         const path_parts = _.map(path.dir.split(Path.sep).concat(path.name), path_transformer)
+         const file_contents = Fs.readFileSync(f, 'utf8')
+         const path_parts = path.dir.split(Path.sep).concat(path.name)
          const sql_name = path_parts.join('_')
          const sql_key = path_parts.join('.')
 
@@ -107,7 +107,7 @@ export function parseFiles(root_directories: string[], path_transformer: (p: str
             relative_path,
             text: file_contents,
             path_parts,
-            parsed:  parseSql(file_contents),
+            parsed: parseSql(file_contents),
          }
       })
    })

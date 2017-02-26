@@ -140,7 +140,7 @@ describe('parseSql', () => {
 
 describe('parseFiles', () => {
    it('should parse files', () => {
-      const result = P.parseFiles([ Path.join(__dirname, './multi/a_sql') ], x => x.toLowerCase())
+      const result = P.parseFiles([ Path.join(__dirname, './multi/a_sql') ])
       expect(result[0].name).to.equal('a_insert')
       expect(result[0].relative_path).to.equal('a/insert.sql')
    })

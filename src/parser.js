@@ -78,7 +78,7 @@ function parseSql(sql) {
     };
 }
 exports.parseSql = parseSql;
-function parseFiles(root_directories, path_transformer) {
+function parseFiles(root_directories) {
     const result = _.flatMap(root_directories, (root_dir) => {
         const root_path = Path.resolve(root_dir);
         const glob_pattern = Path.join(root_path, './**/*.sql');
@@ -86,8 +86,8 @@ function parseFiles(root_directories, path_transformer) {
         return _.map(files, f => {
             const relative_path = f.substring(root_path.length + 1);
             const path = Path.parse(relative_path);
-            const file_contents = Fs.readFileSync(f).toString().trim();
-            const path_parts = _.map(path.dir.split(Path.sep).concat(path.name), path_transformer);
+            const file_contents = Fs.readFileSync(f, 'utf8');
+            const path_parts = path.dir.split(Path.sep).concat(path.name);
             const sql_name = path_parts.join('_');
             const sql_key = path_parts.join('.');
             return {

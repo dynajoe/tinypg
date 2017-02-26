@@ -3,16 +3,11 @@ import * as Pg from 'pg'
 export interface TinyPgOptions {
    root_dir: string[]
    connection_string: string
-   snake: boolean
    error_transformer: Function
 }
 
 export interface Result<T> extends Pg.QueryResult {
    rows: T[]
-}
-
-export interface SqlCall<T> {
-   (params?: Object): Promise<Result<T>>
 }
 
 export interface SqlParseResult {

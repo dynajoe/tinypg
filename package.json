@@ -4,19 +4,12 @@
   "description": "Easy way to call sql files using postgres.",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
-  "config": {
-    "reporter": "spec",
-    "reporter_options": ""
-  },
-  "typescript": {
-    "definition": "dist/index.d.ts"
-  },
   "scripts": {
-    "test": "npm run build-test && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --full-trace -t 15000 $MOCHA_FLAGS --require source-map-support/register --reporter $npm_package_config_reporter $npm_package_config_reporter_options",
-    "test-debugging": "npm run build-test && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --debug-brk=5858 --no-timeouts --colors --full-trace -t 15000 $MOCHA_FLAGS --require source-map-support/register",
-    "clean": "rimraf './dist/'",
-    "build-test": "rimraf './src/**/*.js' './src/**/*.map' && tsc -p src/test",
-    "dist": "npm run clean && tsc"
+    "build-test": "npm run clean && tsc -p src/test",
+    "build": "npm run clean && tsc",
+    "clean": "rimraf './dist/' './src/**/*.js' './src/**/*.map'",
+    "test": "npm run build-test && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --full-trace -t 15000 $MOCHA_FLAGS --require source-map-support/register --reporter spec",
+    "test-debugging": "npm run build-test && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --debug-brk=5858 --no-timeouts --colors --full-trace $MOCHA_FLAGS --require source-map-support/register --reporter spec"
   },
   "repository": {
     "type": "git",

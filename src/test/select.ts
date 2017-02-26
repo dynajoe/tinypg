@@ -93,7 +93,7 @@ describe('Tiny', () => {
 
       describe('that have format parameters', () => {
          it('should perform the replacements', () => {
-            return tiny.formattable('a.testFormat')
+            return tiny.formattable('a.test_format')
             .format('a')
             .query({ a: 'a' })
             .then(res => {
@@ -104,7 +104,7 @@ describe('Tiny', () => {
 
       describe('that have nested parameters', () => {
          it('should perform the replacements', () => {
-            return tiny.sql('a.testNested', { a: { foo: 'a' } })
+            return tiny.sql('a.test_nested', { a: { foo: 'a' } })
             .then(res => {
                expect(res.rows).to.deep.equal([{ id: 1, text: 'a' }])
             })
@@ -113,7 +113,7 @@ describe('Tiny', () => {
 
       describe('that have missing parameters', () => {
          it('should perform the replacements', () => {
-            return tiny.sql('a.testMissingParams', { a: 'a' })
+            return tiny.sql('a.test_missing_params', { a: 'a' })
             .catch(err => {
                expect(err).to.be.instanceof(T.TinyPgError)
                expect(err).to.have.property('queryContext')
@@ -124,7 +124,7 @@ describe('Tiny', () => {
 
       describe('that have format parameters that inject variables', () => {
          it('should perform the replacements', () => {
-            return tiny.formattable('a.testMultiFormat')
+            return tiny.formattable('a.test_multi_format')
             .format(`__tiny_test_db.a WHERE text = :a OR text = :b`)
             .query({ a: 'a', b: 'b' })
             .then(res => {
@@ -138,7 +138,7 @@ describe('Tiny', () => {
 
       describe('that perform multiple formats', () => {
          it('should perform the replacements', () => {
-            return tiny.formattable('a.testMultiFormat')
+            return tiny.formattable('a.test_multi_format')
             .format(`__tiny_test_db.a WHERE text = %L`)
             .format('a')
             .query()
@@ -150,7 +150,7 @@ describe('Tiny', () => {
 
       describe('that throws an error', () => {
          it('should wrap the error with the queryContext', () => {
-            return tiny.sql('a.queryWithError')
+            return tiny.sql('a.query_with_error')
             .catch(err => {
                expect(err).to.be.instanceof(T.TinyPgError)
                expect(err).to.have.property('queryContext')
@@ -162,7 +162,7 @@ describe('Tiny', () => {
 
          it('should have the correct stack trace', () => {
             const thisShouldBeInStack = () => {
-               return tiny.sql('a.queryWithError')
+               return tiny.sql('a.query_with_error')
                .catch(err => {
                   expect(err.stack).to.include('thisShouldBeInStack')
                })

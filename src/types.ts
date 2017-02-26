@@ -15,11 +15,6 @@ export interface SqlCall<T> {
    (params?: Object): Promise<Result<T>>
 }
 
-export interface ClientContext {
-   client: Pg.Client
-   release(): void
-}
-
 export interface SqlParseResult {
    parameterized_sql: string
    mapping: ParamMapping[]

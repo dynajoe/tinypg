@@ -109,37 +109,34 @@ export class TinyPg {
 
    transaction<T>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T> {
       TINYPG_LOG && console.log('TINYPG: transaction')
-      return this.getClientContext()
-      .then(transaction_context => {
+      return this.getClient()
+      .then(tx_client => {
          TINYPG_LOG && console.log('TINYPG: BEGIN transaction')
-         return transaction_context.client.query('BEGIN')
+         return tx_client.query('BEGIN')
          .then(() => {
-            const tiny_client_overrides: Partial<T.ClientContext> = {
-               release: _.identity,
+            const unreleasable_client = new Proxy(tx_client, {})
+
+            unreleasable_client.release = () => {}
+
+            const tiny_tx = new Proxy(this, {})
+
+            tiny_tx.transaction = (f) => {
+               TINYPG_LOG && console.log('TINYPG: inner transaction')
+               return f(tiny_tx)
             }
 
-            const unreleasable_client = _.create(transaction_context, tiny_client_overrides)
-
-            const tiny_overrides: Partial<TinyPg> = {
-               transaction: (f: (db: TinyPg) => Promise<T>) => {
-                  TINYPG_LOG && console.log('TINYPG: inner transaction')
-                  return f(tiny_tx)
-               },
-               getClientContext: () => {
-                  TINYPG_LOG && console.log('TINYPG: getClientContext (transaction)')
-                  return Promise.resolve(unreleasable_client)
-               },
+            tiny_tx.getClient = () => {
+               TINYPG_LOG && console.log('TINYPG: getClient (transaction)')
+               return Promise.resolve(unreleasable_client)
             }
-
-            const tiny_tx = _.create(this, tiny_overrides)
 
             return tx_fn(tiny_tx)
             .then(result => {
                TINYPG_LOG && console.log('TINYPG: COMMIT transaction')
-               return transaction_context.client.query('COMMIT')
+               return tx_client.query('COMMIT')
                .then(() => {
                   TINYPG_LOG && console.log('TINYPG: release transaction client')
-                  transaction_context.release()
+                  tx_client.release()
                   return result
                })
             })
@@ -147,27 +144,21 @@ export class TinyPg {
          .catch(error => {
             const releaseAndThrow = () => {
                TINYPG_LOG && console.log('TINYPG: release transaction client')
-               transaction_context.release()
+               tx_client.release()
                throw error
             }
 
             TINYPG_LOG && console.log('TINYPG: ROLLBACK transaction')
-            return transaction_context.client.query('ROLLBACK')
+            return tx_client.query('ROLLBACK')
             .then(releaseAndThrow)
             .catch(releaseAndThrow)
          })
       })
    }
 
-   getClientContext(): Promise<T.ClientContext> {
+   getClient(): Promise<Pg.Client> {
       TINYPG_LOG && console.log('TINYPG: getClient')
       return this.pool.connect()
-      .then(client => {
-         return {
-            client,
-            release: client.release.bind(client),
-         }
-      })
    }
 
    isolatedEmitter(): T.Disposable & TinyPg {
@@ -187,8 +178,8 @@ export class TinyPg {
    performDbCall<T>(stack_trace_accessor: T.StackTraceAccessor, db_call: DbCall, params: Object) {
       TINYPG_LOG && console.log('TINYPG: performDbCall', db_call.config.name)
 
-      return this.getClientContext()
-      .then((client: T.ClientContext) => {
+      return this.getClient()
+      .then((client: Pg.Client) => {
          const start_at = Date.now()
 
          const query_context = {
@@ -245,7 +236,7 @@ export class DbCall {
       }
    }
 
-   execute<T>(client: T.ClientContext, params: Object): Promise<T.Result<T>> {
+   execute<T>(client: Pg.Client, params: Object): Promise<T.Result<T>> {
       return Promise.resolve()
       .then(() => {
          TINYPG_LOG && console.log('TINYPG: executing', this.config.name)
@@ -259,8 +250,8 @@ export class DbCall {
          })
 
          const query = this.config.prepared
-            ? client.client.query({ name: this.prepared_name, text: this.config.parameterized_query, values })
-            : client.client.query(this.config.parameterized_query, values)
+            ? client.query({ name: this.prepared_name, text: this.config.parameterized_query, values })
+            : client.query(this.config.parameterized_query, values)
 
          return query
          .then((query_result: Pg.QueryResult): T.Result<T> => {

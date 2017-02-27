@@ -220,6 +220,16 @@ export class TinyPg {
          })
       })
    }
+
+   static pg: any = Pg
+
+   static pgDefaults = (obj: any) => {
+      for (let k in obj) {
+         if (obj.hasOwnProperty(k)) {
+            (<any>Pg.defaults)[k] = obj[k]
+         }
+      }
+   }
 }
 
 export class DbCall {
@@ -290,16 +300,6 @@ export class FormattableDbCall {
       const stack_trace_accessor = Util.stackTraceAccessor()
 
       return this.db.performDbCall<T>(stack_trace_accessor, this.db_call, params)
-   }
-
-   static pg: any = Pg
-
-   static pgDefaults = (obj: any) => {
-      for (let k in obj) {
-         if (obj.hasOwnProperty(k)) {
-            (<any>Pg.defaults)[k] = obj[k]
-         }
-      }
    }
 }
 

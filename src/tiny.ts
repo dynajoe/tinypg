@@ -265,8 +265,9 @@ export class DbCall {
          .then((query_result: Pg.QueryResult): T.Result<T> => {
             TINYPG_LOG && Util.Log('execute result', this.config.name)
             return {
-               ...query_result,
+               row_count: query_result.rowCount,
                rows: query_result.rows,
+               command: query_result.command,
             }
          })
       })

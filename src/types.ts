@@ -1,13 +1,13 @@
-import * as Pg from 'pg'
-
 export interface TinyPgOptions {
    root_dir: string[]
    connection_string: string
    error_transformer: Function
 }
 
-export interface Result<T> extends Pg.QueryResult {
+export interface Result<T> {
    rows: T[]
+   command: string
+   row_count: number
 }
 
 export interface SqlParseResult {

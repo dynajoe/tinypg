@@ -52,7 +52,7 @@ export class TinyPg {
             text: sql_file.text,
             parameterized_query: sql_file.parsed.parameterized_sql,
             parameter_map: sql_file.parsed.mapping,
-            prepared: true
+            prepared: true,
          })
       }), x => x.config.key)
    }

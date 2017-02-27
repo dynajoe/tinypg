@@ -15,10 +15,10 @@ Pg.defaults['poolLog'] = TINYPG_LOG ? (m: any) => { Util.Log(`${m}`) } : _.noop
 
 export class TinyPg {
    options: T.TinyPgOptions
-   pool: Pg.Pool
    sql_files: T.SqlFile[]
    events: EventEmitter
    sql_db_calls: { [key: string]: DbCall }
+   private pool: Pg.Pool
 
    constructor(options: Partial<T.TinyPgOptions>) {
       this.options = <T.TinyPgOptions> {
@@ -154,11 +154,6 @@ export class TinyPg {
       })
    }
 
-   getClient(): Promise<Pg.Client> {
-      TINYPG_LOG && Util.Log('getClient')
-      return this.pool.connect()
-   }
-
    isolatedEmitter(): T.Disposable & TinyPg {
       const new_event_emitter = new EventEmitter()
 
@@ -205,7 +200,29 @@ export class TinyPg {
             this.events.emit('result', query_context)
          }
 
-         return db_call.execute<T>(client, params)
+         TINYPG_LOG && Util.Log('executing', db_call.config.name)
+
+         const values: any[] = _.map(db_call.config.parameter_map, m => {
+            if (!_.has(params, m.name)) {
+               throw new Error('Missing expected key [' + m.name + '] on input parameters.')
+            }
+
+            return _.get(params, m.name)
+         })
+
+         const query = db_call.config.prepared
+            ? client.query({ name: db_call.prepared_name, text: db_call.config.parameterized_query, values })
+            : client.query(db_call.config.parameterized_query, values)
+
+         return query
+         .then((query_result: Pg.QueryResult): T.Result<T> => {
+            TINYPG_LOG && Util.Log('execute result', db_call.config.name)
+            return {
+               row_count: query_result.rowCount,
+               rows: query_result.rows,
+               command: query_result.command,
+            }
+         })
          .then(result => {
             callComplete(null, result)
             return result
@@ -219,6 +236,11 @@ export class TinyPg {
             throw this.options.error_transformer(tiny_error)
          })
       })
+   }
+
+   private getClient(): Promise<Pg.Client> {
+      TINYPG_LOG && Util.Log('getClient')
+      return this.pool.connect()
    }
 
    static pg: any = Pg
@@ -242,35 +264,6 @@ export class DbCall {
       if (this.config.prepared) {
          this.prepared_name = `${config.name}_${Util.hashCode(config.parameterized_query).toString().replace('-', 'n')}`.substring(0, 63)
       }
-   }
-
-   execute<T>(client: Pg.Client, params: Object): Promise<T.Result<T>> {
-      return Promise.resolve()
-      .then(() => {
-         TINYPG_LOG && Util.Log('executing', this.config.name)
-
-         const values: any[] = _.map(this.config.parameter_map, m => {
-            if (!_.has(params, m.name)) {
-               throw new Error('Missing expected key [' + m.name + '] on input parameters.')
-            }
-
-            return _.get(params, m.name)
-         })
-
-         const query = this.config.prepared
-            ? client.query({ name: this.prepared_name, text: this.config.parameterized_query, values })
-            : client.query(this.config.parameterized_query, values)
-
-         return query
-         .then((query_result: Pg.QueryResult): T.Result<T> => {
-            TINYPG_LOG && Util.Log('execute result', this.config.name)
-            return {
-               row_count: query_result.rowCount,
-               rows: query_result.rows,
-               command: query_result.command,
-            }
-         })
-      })
    }
 }
 

@@ -1,26 +1,26 @@
-var Tiny = require('../');
+const TinyPg = require('../').TinyPg
 
-var t = new Tiny({
-   connection_string: "postgres://postgres@localhost:5432/mydb",
-   root_dir: __dirname + '/sql_files',
-   snake: true
-});
+const db = new TinyPg({
+   connection_string: 'postgres://postgres@localhost:5432/mydb',
+   root_dir: __dirname + '/sql_files'
+})
 
-Tiny.pgDefaults({
-   poolSize: 1
-});
+db.sql('fetch_user_by_name', {
+   name: 'Joe',
+})
+.then(res => {
+   console.log(res)
+})
+.catch(error => {
+   console.log(error)
+})
 
-t.sql.fetch_user_by_name({ name: 'Joe' })
-.then(function () { })
-.catch(function () { });
-
-t.query('SELECT * FROM users where name = :name', {
+db.query('SELECT * FROM users where name = :name', {
    name: 'Joe'
 })
-.then(function () { })
-.catch(function () { });
-
-t.getClient().then(function (ctx) {
-   console.log('Closing connection');
-   ctx.client.end();
-});
+.then(res => {
+   console.log(res)
+})
+.catch(error => {
+   console.log(error)
+})

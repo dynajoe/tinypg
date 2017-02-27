@@ -200,28 +200,31 @@ export class TinyPg {
             this.events.emit('result', query_context)
          }
 
-         TINYPG_LOG && Util.Log('executing', db_call.config.name)
+         return Promise.resolve()
+         .then(() => {
+            TINYPG_LOG && Util.Log('executing', db_call.config.name)
 
-         const values: any[] = _.map(db_call.config.parameter_map, m => {
-            if (!_.has(params, m.name)) {
-               throw new Error('Missing expected key [' + m.name + '] on input parameters.')
-            }
+            const values: any[] = _.map(db_call.config.parameter_map, m => {
+               if (!_.has(params, m.name)) {
+                  throw new Error('Missing expected key [' + m.name + '] on input parameters.')
+               }
 
-            return _.get(params, m.name)
-         })
+               return _.get(params, m.name)
+            })
 
-         const query = db_call.config.prepared
-            ? client.query({ name: db_call.prepared_name, text: db_call.config.parameterized_query, values })
-            : client.query(db_call.config.parameterized_query, values)
+            const query = db_call.config.prepared
+               ? client.query({ name: db_call.prepared_name, text: db_call.config.parameterized_query, values })
+               : client.query(db_call.config.parameterized_query, values)
 
-         return query
-         .then((query_result: Pg.QueryResult): T.Result<T> => {
-            TINYPG_LOG && Util.Log('execute result', db_call.config.name)
-            return {
-               row_count: query_result.rowCount,
-               rows: query_result.rows,
-               command: query_result.command,
-            }
+            return query
+            .then((query_result: Pg.QueryResult): T.Result<T> => {
+               TINYPG_LOG && Util.Log('execute result', db_call.config.name)
+               return {
+                  row_count: query_result.rowCount,
+                  rows: query_result.rows,
+                  command: query_result.command,
+               }
+            })
          })
          .then(result => {
             callComplete(null, result)

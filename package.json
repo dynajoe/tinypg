@@ -1,6 +1,6 @@
 {
   "name": "tinypg",
-  "version": "2.0.0-alpha.10",
+  "version": "2.0.0-alpha.11",
   "description": "Easy way to call sql files using postgres.",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -8,6 +8,7 @@
     "build-test": "npm run clean && tsc -p src/test",
     "build": "npm run clean && tsc",
     "clean": "rimraf './dist/' './src/**/*.js' './src/**/*.map'",
+    "prepublish": "npm run build",
     "test": "npm run build-test && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --full-trace -t 15000 $MOCHA_FLAGS --require source-map-support/register --reporter spec",
     "test-debugging": "npm run build-test && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --debug-brk=5858 --no-timeouts --colors --full-trace $MOCHA_FLAGS --require source-map-support/register --reporter spec"
   },

@@ -16,7 +16,7 @@ Pg.defaults['poolLog'] = TINYPG_LOG ? (m: any) => { Util.Log(`${m}`) } : _.noop
 export class TinyPg {
    options: T.TinyPgOptions
    sql_files: T.SqlFile[]
-   events: EventEmitter
+   events: TinyPgEvents
    sql_db_calls: { [key: string]: DbCall }
    private pool: Pg.Pool
 
@@ -175,7 +175,7 @@ export class TinyPg {
       .then((client: Pg.Client) => {
          const start_at = Date.now()
 
-         const query_context = {
+         const query_context: T.QueryBeginContext = {
             id: Uuid.v4(),
             sql: db_call.config.parameterized_query,
             start: start_at,
@@ -190,14 +190,14 @@ export class TinyPg {
 
             const end_at = Date.now()
 
-            _.assign(query_context, {
+            const complete_context: T.QueryCompleteContext = _.assign(query_context, {
                end: end_at,
                duration: end_at - start_at,
                error: error,
                data: data,
             })
 
-            this.events.emit('result', query_context)
+            this.events.emit('result', complete_context)
          }
 
          return Promise.resolve()
@@ -255,6 +255,14 @@ export class TinyPg {
          }
       }
    }
+}
+
+export interface TinyPgEvents extends EventEmitter {
+   on(event: 'query', listener: (x: T.QueryBeginContext) => void): this
+
+   on(event: 'result', listener: (x: T.QueryCompleteContext) => void): this
+
+   emit(event: 'query' | 'result', ...args: any[])
 }
 
 export class DbCall {

@@ -10,6 +10,21 @@ export interface Result<T> {
    row_count: number
 }
 
+export interface QueryBeginContext {
+   id: string
+   sql: string
+   start: number
+   name: string
+   params: Object
+}
+
+export interface QueryCompleteContext extends QueryBeginContext {
+   end: number
+   duration: number
+   error: Error
+   data: Result<any>
+}
+
 export interface SqlParseResult {
    parameterized_sql: string
    mapping: ParamMapping[]

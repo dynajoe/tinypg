@@ -21,8 +21,8 @@ export interface QueryBeginContext {
 export interface QueryCompleteContext extends QueryBeginContext {
    end: number
    duration: number
-   error: Error
    data: Result<any>
+   error?: Error
 }
 
 export interface SqlParseResult {

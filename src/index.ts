@@ -11,7 +11,14 @@ export
    , TinyPgError
    , QueryBeginContext
    , QueryCompleteContext
+   , SqlParseResult
+   , SqlFile
    } from './types'
+
+export
+   { parseSql
+   , parseFiles
+   } from './parser'
 
 export default TinyPg
 

@@ -43,6 +43,10 @@ export class TinyPg {
 
       this.pool = new Pg.Pool(pool_config)
 
+      this.pool.on('error', (error) => {
+         TINYPG_LOG && Util.Log('Error with idle client in pool.', error)
+      })
+
       this.sql_files = P.parseFiles([].concat(this.options.root_dir))
 
       this.sql_db_calls = _.keyBy(_.map(this.sql_files, sql_file => {
@@ -185,8 +189,12 @@ export class TinyPg {
 
          this.events.emit('query', query_context)
 
-         const callComplete = (error: Error, data: T.Result<T>) => {
-            client.release()
+         const callComplete = _.once((error: Error, data: T.Result<T>) => {
+            if (error && (!error['code'] || _.startsWith(error['code'], '57P'))) {
+               (<any>client).release(error)
+            } else {
+               client.release()
+            }
 
             const end_at = Date.now()
 
@@ -198,9 +206,9 @@ export class TinyPg {
             })
 
             this.events.emit('result', complete_context)
-         }
+         })
 
-         return Promise.resolve()
+         const query_promise = Promise.resolve()
          .then(() => {
             TINYPG_LOG && Util.Log('executing', db_call.config.name)
 
@@ -226,6 +234,8 @@ export class TinyPg {
                }
             })
          })
+
+         return query_promise
          .then(result => {
             callComplete(null, result)
             return result
@@ -234,8 +244,10 @@ export class TinyPg {
             callComplete(error, null)
 
             const tiny_error = new T.TinyPgError(error.message)
+
             tiny_error.stack = stack_trace_accessor.stack
             tiny_error.queryContext = query_context
+
             throw this.options.error_transformer(tiny_error)
          })
       })

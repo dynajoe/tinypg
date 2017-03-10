@@ -189,7 +189,27 @@ export class TinyPg {
 
          this.events.emit('query', query_context)
 
+         let call_completed = false
+
+         // Work around node-postgres swallowing queries after a connection error
+         // https://github.com/brianc/node-postgres/issues/718
+         const connection_failed_promise = new Promise<T.Result<T>>((resolve, reject) => {
+            const checkForConnection = () => {
+               if (call_completed) {
+                  resolve()
+               } else if (client['connection'].stream.destroyed) {
+                  reject(new Error('Connection terminated'))
+               } else {
+                  setTimeout(checkForConnection, 500)
+               }
+            }
+
+            setTimeout(checkForConnection, 500)
+         })
+
          const callComplete = _.once((error: Error, data: T.Result<T>) => {
+            call_completed = true
+
             if (error && (!error['code'] || _.startsWith(error['code'], '57P'))) {
                (<any>client).release(error)
             } else {
@@ -235,7 +255,7 @@ export class TinyPg {
             })
          })
 
-         return query_promise
+         return Promise.race([ connection_failed_promise, query_promise ])
          .then(result => {
             callComplete(null, result)
             return result

@@ -38,7 +38,7 @@ export class TinyPg {
          host: params.hostname,
          port: parseInt(params.port, 10),
          database: params.pathname.split('/')[1],
-         ssl: params.query.sslmode === 'require',
+         ssl: params.query.sslmode !== 'disable',
       }
 
       this.pool = new Pg.Pool(pool_config)

@@ -124,9 +124,17 @@ export class TinyPg {
          .then(() => {
             const tiny_tx = Object.create(this)
 
+            const assertThennable = (tx_fn_result) => {
+               if (_.isNil(tx_fn_result) || !_.isFunction(tx_fn_result.then)) {
+                  throw new Error('Expected thennable to be returned from transaction function.')
+               }
+
+               return tx_fn_result
+            }
+
             tiny_tx.transaction = (f) => {
                TINYPG_LOG && Util.Log('inner transaction')
-               return f(tiny_tx)
+               return assertThennable(f(tiny_tx))
             }
 
             tiny_tx.getClient = () => {
@@ -134,7 +142,7 @@ export class TinyPg {
                return Promise.resolve(tx_client)
             }
 
-            return tx_fn(tiny_tx)
+            return assertThennable(tx_fn(tiny_tx))
             .then(result => {
                TINYPG_LOG && Util.Log('COMMIT transaction')
                return tx_client.query('COMMIT')

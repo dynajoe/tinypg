@@ -72,6 +72,16 @@ describe('Transactions', () => {
             })
          })
       })
+
+      it('should require thennable from transaction function', () => {
+         return tiny.transaction(() => {
+            return null
+         })
+         .then(() => expect.fail('this should not succeed'))
+         .catch(error => {
+            expect(error.message).to.contain('thennable')
+         })
+      })
    })
 
    describe('Nested Transactions', () => {
@@ -115,6 +125,16 @@ describe('Transactions', () => {
             return H.getA().then(res => {
                expect(res.rows).to.have.length(0)
             })
+         })
+      })
+
+      it('should require thennable from transaction function', () => {
+         return tiny.transaction(() => {
+            return null
+         })
+         .then(() => expect.fail('this should not succeed'))
+         .catch(error => {
+            expect(error.message).to.contain('thennable')
          })
       })
    })

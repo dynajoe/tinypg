@@ -61,7 +61,7 @@ export class TinyPg {
       }), x => x.config.key)
    }
 
-   query<T>(raw_sql: string, params: Object = {}): Promise<T.Result<T>> {
+   query<T = any>(raw_sql: string, params: Object = {}): Promise<T.Result<T>> {
       const stack_trace_accessor = Util.stackTraceAccessor()
 
       TINYPG_LOG && Util.Log('query')
@@ -82,7 +82,7 @@ export class TinyPg {
       })
    }
 
-   sql<T>(name: string, params: Object = {}): Promise<T.Result<T>> {
+   sql<T = any>(name: string, params: Object = {}): Promise<T.Result<T>> {
       const stack_trace_accessor = Util.stackTraceAccessor()
 
       TINYPG_LOG && Util.Log('sql', name)
@@ -105,7 +105,7 @@ export class TinyPg {
       return new FormattableDbCall(db_call, this)
    }
 
-   transaction<T>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T> {
+   transaction<T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T> {
       TINYPG_LOG && Util.Log('transaction')
       return this.getClient()
       .then(tx_client => {
@@ -172,7 +172,7 @@ export class TinyPg {
       }, this, tiny_overrides))
    }
 
-   performDbCall<T>(stack_trace_accessor: T.StackTraceAccessor, db_call: DbCall, params: Object) {
+   performDbCall<T = any>(stack_trace_accessor: T.StackTraceAccessor, db_call: DbCall, params: Object): Promise<T.Result<T>> {
       TINYPG_LOG && Util.Log('performDbCall', db_call.config.name)
 
       return this.getClient()
@@ -273,6 +273,10 @@ export class TinyPg {
       })
    }
 
+   close(): Promise<void> {
+      return this.pool.end()
+   }
+
    private getClient(): Promise<Pg.Client> {
       TINYPG_LOG && Util.Log('getClient')
       return this.pool.connect()
@@ -333,7 +337,7 @@ export class FormattableDbCall {
       return new FormattableDbCall(new_db_call, this.db)
    }
 
-   query<T>(params: Object = {}): Promise<T.Result<T>> {
+   query<T = any>(params: Object = {}): Promise<T.Result<T>> {
       const stack_trace_accessor = Util.stackTraceAccessor()
 
       return this.db.performDbCall<T>(stack_trace_accessor, this.db_call, params)

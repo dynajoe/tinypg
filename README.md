@@ -50,7 +50,6 @@ TinyPg checks for the existence of required parameters when each query is execut
 If you've ever looked at handling transactions with node-postgres you'll quickly realize that it's easy to get into deadlock. Tiny handles the re-use of the same connection for all queries performed within the same transaction provided you use the new database object provided by the call to *.transaction*. Here's how to create a customer and associate an address in the same transaction.
 
 ```typescript
-
 db.transaction(transaction_db => { // BEGIN
    return transaction_db.sql('customer.create', { // INSERT
       first_name: 'Joe',
@@ -132,7 +131,7 @@ If you're using TypeScript in your project (which I highly recommend) you can ge
 - error_transformer: Function; - Allows transforming all errors from TinyPg to your domain.
 ### Example error_transformer
 
-```
+```typescript
 const error_transformer = (error) => {
    const parseErrorByCode = () => {
       const pg_error = error.queryContext.error
@@ -182,6 +181,41 @@ See [Pg Error Codes Documentation](https://www.postgresql.org/docs/9.6/static/er
 Select a SQL file that has formattable parts. See [node-pg-format](https://github.com/datalanche/node-pg-format) for format strings. This is useful when needing to build dynamic queries.
 
 - name: string - The key of the sql file. This is the path to the file substituting `.` for path delimiter. e.g. `users.create`
+
+### formattable example usage
+
+database/users/retrieve.sql
+```sql
+SELECT * 
+FROM users
+WHERE last_name = :last_name 
+ORDER BY
+  -- Custom ordering
+  %s
+  
+  user_id DESC;
+```
+
+Usage in code
+
+```
+db.formattable('users.retrieve')
+  .format('last_name ASC,')
+  .query({ last_name: 'Andaverde' })
+```
+
+Resulting Query
+
+```sql
+SELECT * 
+FROM users
+WHERE last_name = :last_name 
+ORDER BY
+  -- Custom ordering
+  last_name ASC,
+ 
+  user_id DESC;
+```
 
 ## transaction<T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T>;
 

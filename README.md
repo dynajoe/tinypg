@@ -124,11 +124,11 @@ If you're using TypeScript in your project (which I highly recommend) you can ge
 
 # API
 
-## constructor(options: Partial<T.TinyPgOptions>);
+## constructor(options: Partial<T.TinyPgOptions>)
 
-- root_dir: string[]; - a list of directories. All directories must be specified using the full path.
-- connection_string: string; - The database connection string in URL format. e.g. postgres://user:password@host:port/database?options=query
-- error_transformer: Function; - Allows transforming all errors from TinyPg to your domain.
+- __root_dir: string[]__ - a list of directories. All directories must be specified using the full path.
+- __connection_string: string__ - The database connection string in URL format. e.g. postgres://user:password@host:port/database?options=query
+- __error_transformer: Function__ - Allows transforming all errors from TinyPg to your domain.
 ### Example error_transformer
 
 ```typescript
@@ -167,20 +167,20 @@ const error_transformer = (error) => {
 
 See [Pg Error Codes Documentation](https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html)
 
-## query<T = any>(raw_sql: string, params?: Object): Promise<T.Result<T>>;
+## query<T = any>(raw_sql: string, params?: Object): Promise<T.Result<T>>
 
-- raw_sql: string - The SQL query to execute.
-- params: Object (optional) - parameters for the query.
+- __raw_sql: string__ - The SQL query to execute.
+- __params: Object__ (optional) - parameters for the query.
 
-## sql<T = any>(name: string, params?: Object): Promise<T.Result<T>>;
+## sql<T = any>(name: string, params?: Object): Promise<T.Result<T>>
 
-- name: string - The key of the sql file. This is the path to the file substituting `.` for path delimiter. e.g. `users.create`
+- __name: string__ - The key of the sql file. This is the path to the file substituting `.` for path delimiter. e.g. `users.create`
 
-## formattable(name: string): T.FormattableDbCall;
+## formattable(name: string): T.FormattableDbCall
 
 Select a SQL file that has formattable parts. See [node-pg-format](https://github.com/datalanche/node-pg-format) for format strings. This is useful when needing to build dynamic queries.
 
-- name: string - The key of the sql file. This is the path to the file substituting `.` for path delimiter. e.g. `users.create`
+- __name: string__ - The key of the sql file. This is the path to the file substituting `.` for path delimiter. e.g. `users.create`
 
 ### formattable example usage
 
@@ -217,16 +217,16 @@ ORDER BY
   user_id DESC;
 ```
 
-## transaction<T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T>;
+## transaction<T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T>
 
 Starts a database transaction and ensures all queries executed against the provided TinyPg instance use the same client. 
 
-- tx_fn: (db: TinyPg) => Promise<T> - Provides db to perform transacted queries.
+- __tx_fn: (db: TinyPg) => Promise<T>__ - Provides db to perform transacted queries.
 
-## isolatedEmitter(): T.Disposable & TinyPg;
+## isolatedEmitter(): T.Disposable & TinyPg
 
 Provides an isolated event emitter so that `result` and `query` events can be monitored for all queries related to the new TinyPg instance.
 
-## close(): Promise<void>;
+## close(): Promise<void>
 
 Shuts down the postgres client pool.

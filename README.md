@@ -130,6 +130,59 @@ If you're using TypeScript in your project (which I highly recommend) you can ge
 - root_dir: string[]; - a list of directories. All directories must be specified using the full path.
 - connection_string: string; - The database connection string in URL format. e.g. postgres://user:password@host:port/database?options=query
 - error_transformer: Function; - Allows transforming all errors from TinyPg to your domain.
+### Example error_transformer
+
+```
+const error_transformer = (error) => {
+   const parseErrorByCode = () => {
+      const pg_error = error.queryContext.error
+      const code = pg_error.code
+
+      switch (code) {
+         case '22P02': // Invalid text representation
+            return new E.InvalidArgumentError(error.message)
+         case '23502': // Constraint error
+            return new E.InvalidArgumentError(`Invalid Argument: ${pg_error.column}`)
+         case '23503': // Foreign key violation
+            return new E.ForeignKeyViolationError('Foreign Key Violation', pg_error)
+         case '23505': // unique violation
+         case '23P01': // exclusion constraint violation
+            return new E.ConflictError('Data Conflict Error', pg_error)
+         case '23514': // Check Violation
+            return new E.InvalidArgumentError(`Invalid Argument: ${error.message}`)
+         case 'XX000': // PLv8 Errors
+         case 'P0001': // internal errors- thrown by raise exception
+            try {
+               const error_details = JSON.parse(error.message)
+
+               if (error_details.type === 'INVALID_PARAMS') {
+                  return new E.InvalidArgumentError(`Invalid Argument: ${error_details.message}`)
+               }
+               if (error_details.type === 'DATA_CONFLICT') {
+                  return new E.ConflictError(`Data Conflict: ${error_details.message}`)
+               }
+            } catch (e) {
+               // * no-op *
+            }
+            if (/range lower bound must be less than or equal to range upper bound/.test(error.message)) {
+               return new E.InvalidArgumentError(`Invalid Argument: ${error.message}`)
+            }
+            return new E.InvalidArgumentError(`Invalid Argument: ${error.message}`)
+         default:
+            return new E.UnknownPostgresError(error.message)
+      }
+   }
+
+   let new_error
+   if (error.queryContext && error.queryContext.error && error.queryContext.error.code) {
+      new_error = parseErrorByCode()
+   } else {
+      new_error = new E.UnknownPostgresError(error.message)
+   }
+   new_error.stack = error.stack
+   return new_error
+}
+```
 
 ## query<T = any>(raw_sql: string, params?: Object): Promise<T.Result<T>>;
 

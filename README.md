@@ -124,3 +124,17 @@ If you're using TypeScript in your project (which I highly recommend) you can ge
 [TSLint Rules](https://github.com/smerchek/tslint-tinypg)
 
 # API
+
+## constructor(options: Partial<T.TinyPgOptions>);
+
+## query<T = any>(raw_sql: string, params?: Object): Promise<T.Result<T>>;
+
+## sql<T = any>(name: string, params?: Object): Promise<T.Result<T>>;
+
+## formattable(name: string): T.FormattableDbCall;
+
+## transaction<T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T>;
+
+## isolatedEmitter(): T.Disposable & TinyPg;
+
+## close(): Promise<void>;

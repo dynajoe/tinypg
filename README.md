@@ -1,4 +1,4 @@
-## Introduction
+# Introduction
 
 TinyPg makes it possible to use objects as the source for parameters in a query. For example:
 
@@ -17,7 +17,7 @@ WHERE address.state = :state
 })
 ```
 
-### SQL files over embedded strings
+## SQL files over embedded strings
 Now that we're past the mess of managing parameters the next step is organizing our SQL statements. It's kind of ugly to embed SQL in your JavaScript syntax. TinyPg allows for specifying a directory for which it will load all files with the `.sql` extension. The path to the file will normalized into a key for which you can look up and execute the SQL in the file as a prepared statement. For our projects we have hundreds of different SQL queries. It's worth noting that we don't subscribe to tools that generate SQL on your behalf. Many of our queries require use of Postgres features that no SQL generator can provide. Therefore, we don't bother trying to force these libraries to be smarter and stick to the language that's best suited for retrieving data from relational data stores: SQL. 
 
 Consider the following directory structure:
@@ -45,7 +45,7 @@ db.sql('customer.search', {
 
 TinyPg checks for the existence of required parameters when each query is executed. Instead of placing db null in will fail with an error message describing the missing parameter. I highly recommend using an object literal to specify parameter in order to use some of the static analysis tools like tslint or the VS Code plugin.
 
-### Transaction support
+## Transaction support
 
 If you've ever looked at handling transactions with node-postgres you'll quickly realize that it's easy to get into deadlock. Tiny handles the re-use of the same connection for all queries performed within the same transaction provided you use the new database object provided by the call to *.transaction*. Here's how to create a customer and associate an address in the same transaction.
 
@@ -113,7 +113,7 @@ function ApiRequestHandler(request, reply) {
 
 In the above example *isolated_db* is the same instance of TinyPg except with an overridden events property and *dispose* method to remove all listeners. The *UserService* can create other services and pass its reference to *isolated_db* to other services. In doing so, you can track all database queries executed as the result of every API request.
 
-### VS Code Plugin Support
+## VS Code Plugin Support
 
 If you're using TypeScript in your project (which I highly recommend) you can get an extra level of validation and editor integration by using the TinyPg VS Code plugin. This plugin can statically analyze (why I suggest using object literals) your code to ensure you've referenced sql files that exist and have provided all required parameters.
 
@@ -122,3 +122,5 @@ If you're using TypeScript in your project (which I highly recommend) you can ge
 [TinyPg VS Code Plugin](https://github.com/joeandaverde/vscode-tinypg)
 
 [TSLint Rules](https://github.com/smerchek/tslint-tinypg)
+
+# API

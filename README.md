@@ -127,14 +127,35 @@ If you're using TypeScript in your project (which I highly recommend) you can ge
 
 ## constructor(options: Partial<T.TinyPgOptions>);
 
+- root_dir: string[]; - a list of directories. All directories must be specified using the full path.
+- connection_string: string; - The database connection string in URL format. e.g. postgres://user:password@host:port/database?options=query
+- error_transformer: Function; - Allows transforming all errors from TinyPg to your domain.
+
 ## query<T = any>(raw_sql: string, params?: Object): Promise<T.Result<T>>;
+
+- raw_sql: string - The SQL query to execute.
+- params: Object (optional) - parameters for the query.
 
 ## sql<T = any>(name: string, params?: Object): Promise<T.Result<T>>;
 
+- name: string - The key of the sql file. This is the path to the file substituting `.` for path delimiter. e.g. `users.create`
+
 ## formattable(name: string): T.FormattableDbCall;
+
+Select a SQL file that has formattable parts. See [node-pg-format](https://github.com/datalanche/node-pg-format) for format strings. This is useful when needing to build dynamic queries.
+
+- name: string - The key of the sql file. This is the path to the file substituting `.` for path delimiter. e.g. `users.create`
 
 ## transaction<T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T>;
 
+Starts a database transaction and ensures all queries executed against the provided TinyPg instance use the same client. 
+
+- tx_fn: (db: TinyPg) => Promise<T> - Provides db to perform transacted queries.
+
 ## isolatedEmitter(): T.Disposable & TinyPg;
 
+Provides an isolated event emitter so that `result` and `query` events can be monitored for all queries related to the new TinyPg instance.
+
 ## close(): Promise<void>;
+
+Shuts down the postgres client pool.

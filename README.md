@@ -237,5 +237,5 @@ You should have a local development Postgres server running. This server must al
 
 ```bash 
 npm install
-npm run test
+npm test
 ```

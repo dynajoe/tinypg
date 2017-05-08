@@ -150,24 +150,6 @@ const error_transformer = (error) => {
             return new E.ConflictError('Data Conflict Error', pg_error)
          case '23514': // Check Violation
             return new E.InvalidArgumentError(`Invalid Argument: ${error.message}`)
-         case 'XX000': // PLv8 Errors
-         case 'P0001': // internal errors- thrown by raise exception
-            try {
-               const error_details = JSON.parse(error.message)
-
-               if (error_details.type === 'INVALID_PARAMS') {
-                  return new E.InvalidArgumentError(`Invalid Argument: ${error_details.message}`)
-               }
-               if (error_details.type === 'DATA_CONFLICT') {
-                  return new E.ConflictError(`Data Conflict: ${error_details.message}`)
-               }
-            } catch (e) {
-               // * no-op *
-            }
-            if (/range lower bound must be less than or equal to range upper bound/.test(error.message)) {
-               return new E.InvalidArgumentError(`Invalid Argument: ${error.message}`)
-            }
-            return new E.InvalidArgumentError(`Invalid Argument: ${error.message}`)
          default:
             return new E.UnknownPostgresError(error.message)
       }
@@ -183,6 +165,8 @@ const error_transformer = (error) => {
    return new_error
 }
 ```
+
+See [Pg Error Codes Documentation](https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html)
 
 ## query<T = any>(raw_sql: string, params?: Object): Promise<T.Result<T>>;
 

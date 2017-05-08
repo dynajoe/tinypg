@@ -230,3 +230,12 @@ Provides an isolated event emitter so that `result` and `query` events can be mo
 ## close(): Promise<void>
 
 Shuts down the postgres client pool.
+
+# Development
+
+You should have a local development Postgres server running. This server must allow connections from the `postgres` user without password. If this isn't the behavior your want change the connection string in `src/test/helper.ts`.
+
+```bash 
+npm install
+npm run test
+```

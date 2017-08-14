@@ -35,7 +35,7 @@
     "glob": "6.0.1",
     "lodash": "4.0.0",
     "node-uuid": "1.4.7",
-    "pg": "6.1.2",
+    "pg": "6.1.6",
     "pg-format": "1.0.1"
   },
   "devDependencies": {

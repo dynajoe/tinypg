@@ -74,6 +74,8 @@ export class TinyPgError extends Error {
    }
 }
 
+export type TinyPgErrorTransformer = (error: TinyPgError) => any
+
 export interface Disposable {
    dispose(): void
 }

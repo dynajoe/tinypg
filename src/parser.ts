@@ -50,7 +50,7 @@ export function parseSql(sql: string): T.SqlParseResult {
       const n = sql[i + 1]
       const p = sql[i - 1]
 
-      if (!multiLineComment && !singleLineComment && c === '\'' && p !== '\\') {
+      if (!multiLineComment && !singleLineComment && c === "'" && p !== '\\') {
          inString = !inString
       } else if (!inString && c === '-' && p === '-') {
          singleLineComment = true

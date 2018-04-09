@@ -3,22 +3,15 @@ import * as Pg from 'pg'
 
 export const connection_string = 'postgres://postgres@localhost:5432/?sslmode=disable'
 
-export function dbQuery(query: string, args: any[] = null): Promise<Pg.QueryResult> {
-   const query_promise = new Promise((resolve, reject) => {
-      Pg.connect(connection_string, (err, client, done) => {
-         if (err) {
-            done()
-            return reject(err)
-         }
+export async function dbQuery(query: string, args: any[] = null): Promise<Pg.QueryResult> {
+   const client = new Pg.Client(connection_string)
+   await client.connect()
 
-         return client.query(query, args)
-         .then(resolve)
-         .catch(reject)
-         .then(() => done())
-      })
-   })
-
-   return query_promise
+   try {
+      return await client.query(query, args)
+   } finally {
+      void client.end()
+   }
 }
 
 export function getA(): Promise<Pg.QueryResult> {
@@ -26,7 +19,7 @@ export function getA(): Promise<Pg.QueryResult> {
 }
 
 export function insertA(text: string): Promise<Pg.QueryResult> {
-   return dbQuery('INSERT INTO __tiny_test_db.a (text) VALUES ($1);', [ text ])
+   return dbQuery('INSERT INTO __tiny_test_db.a (text) VALUES ($1);', [text])
 }
 
 export function setUpDb(): Promise<any> {

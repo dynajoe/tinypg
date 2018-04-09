@@ -11,25 +11,24 @@ const PgFormat = require('pg-format')
 
 const TINYPG_LOG = Util.LogEnabled
 
-Pg.defaults['poolLog'] = TINYPG_LOG ? (m: any) => { Util.Log(`${m}`) } : _.noop
+Pg.defaults['poolLog'] = TINYPG_LOG
+   ? (m: any) => {
+        Util.Log(`${m}`)
+     }
+   : _.noop
 
 export class TinyPg {
-   options: T.TinyPgOptions
    sql_files: T.SqlFile[]
    events: TinyPgEvents
    sql_db_calls: { [key: string]: DbCall }
-   private pool: Pg.Pool
+   pool: Pg.Pool
+   error_transformer: T.TinyPgErrorTransformer
 
    constructor(options: Partial<T.TinyPgOptions>) {
-      this.options = <T.TinyPgOptions> {
-         error_transformer: _.identity,
-         root_dir: [],
-         ...options
-      }
-
       this.events = new EventEmitter()
+      this.error_transformer = _.isFunction(options.error_transformer) ? options.error_transformer : _.identity
 
-      const params = Url.parse(<string> options.connection_string, true)
+      const params = Url.parse(options.connection_string, true)
       const auth = params.auth.split(':')
 
       const pool_config: Pg.PoolConfig = {
@@ -43,30 +42,32 @@ export class TinyPg {
 
       this.pool = new Pg.Pool(pool_config)
 
-      this.pool.on('error', (error) => {
+      this.pool.on('error', error => {
          TINYPG_LOG && Util.Log('Error with idle client in pool.', error)
       })
 
-      this.sql_files = P.parseFiles([].concat(this.options.root_dir))
+      this.sql_files = P.parseFiles([].concat(_.isNil(options.root_dir) ? [] : options.root_dir))
 
-      this.sql_db_calls = _.keyBy(_.map(this.sql_files, sql_file => {
-         return new DbCall({
-            name: sql_file.name,
-            key: sql_file.key,
-            text: sql_file.text,
-            parameterized_query: sql_file.parsed.parameterized_sql,
-            parameter_map: sql_file.parsed.mapping,
-            prepared: true,
-         })
-      }), x => x.config.key)
+      this.sql_db_calls = _.keyBy(
+         _.map(this.sql_files, sql_file => {
+            return new DbCall({
+               name: sql_file.name,
+               key: sql_file.key,
+               text: sql_file.text,
+               parameterized_query: sql_file.parsed.parameterized_sql,
+               parameter_map: sql_file.parsed.mapping,
+               prepared: true,
+            })
+         }),
+         x => x.config.key
+      )
    }
 
    query<T = any>(raw_sql: string, params: Object = {}): Promise<T.Result<T>> {
       const stack_trace_accessor = Util.stackTraceAccessor()
 
       TINYPG_LOG && Util.Log('query')
-      return Promise.resolve()
-      .then(() => {
+      return Promise.resolve().then(() => {
          const parsed = P.parseSql(raw_sql)
 
          const db_call = new DbCall({
@@ -107,12 +108,11 @@ export class TinyPg {
 
    transaction<T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T> {
       TINYPG_LOG && Util.Log('transaction')
-      return this.getClient()
-      .then(tx_client => {
+      return this.getClient().then(tx_client => {
          TINYPG_LOG && Util.Log('BEGIN transaction')
 
          const release_ref = tx_client.release
-         tx_client.release = () => { }
+         tx_client.release = () => {}
 
          const release = () => {
             TINYPG_LOG && Util.Log('release transaction client')
@@ -120,71 +120,75 @@ export class TinyPg {
             tx_client.release()
          }
 
-         return tx_client.query('BEGIN')
-         .then(() => {
-            const tiny_tx = Object.create(this)
+         return tx_client
+            .query('BEGIN')
+            .then(() => {
+               const tiny_tx = Object.create(this)
 
-            const assertThennable = (tx_fn_result) => {
-               if (_.isNil(tx_fn_result) || !_.isFunction(tx_fn_result.then)) {
-                  throw new Error('Expected thennable to be returned from transaction function.')
+               const assertThennable = tx_fn_result => {
+                  if (_.isNil(tx_fn_result) || !_.isFunction(tx_fn_result.then)) {
+                     throw new Error('Expected thennable to be returned from transaction function.')
+                  }
+
+                  return tx_fn_result
                }
 
-               return tx_fn_result
-            }
+               tiny_tx.transaction = f => {
+                  TINYPG_LOG && Util.Log('inner transaction')
+                  return assertThennable(f(tiny_tx))
+               }
 
-            tiny_tx.transaction = (f) => {
-               TINYPG_LOG && Util.Log('inner transaction')
-               return assertThennable(f(tiny_tx))
-            }
+               tiny_tx.getClient = () => {
+                  TINYPG_LOG && Util.Log('getClient (transaction)')
+                  return Promise.resolve(tx_client)
+               }
 
-            tiny_tx.getClient = () => {
-               TINYPG_LOG && Util.Log('getClient (transaction)')
-               return Promise.resolve(tx_client)
-            }
-
-            return assertThennable(tx_fn(tiny_tx))
-            .then(result => {
-               TINYPG_LOG && Util.Log('COMMIT transaction')
-               return tx_client.query('COMMIT')
-               .then(() => {
-                  release()
-                  return result
+               return assertThennable(tx_fn(tiny_tx)).then(result => {
+                  TINYPG_LOG && Util.Log('COMMIT transaction')
+                  return tx_client.query('COMMIT').then(() => {
+                     release()
+                     return result
+                  })
                })
             })
-         })
-         .catch(error => {
-            const releaseAndThrow = () => {
-               release()
-               throw error
-            }
+            .catch(error => {
+               const releaseAndThrow = () => {
+                  release()
+                  throw error
+               }
 
-            TINYPG_LOG && Util.Log('ROLLBACK transaction')
-            return tx_client.query('ROLLBACK')
-            .then(releaseAndThrow)
-            .catch(releaseAndThrow)
-         })
+               TINYPG_LOG && Util.Log('ROLLBACK transaction')
+               return tx_client
+                  .query('ROLLBACK')
+                  .then(releaseAndThrow)
+                  .catch(releaseAndThrow)
+            })
       })
    }
 
    isolatedEmitter(): T.Disposable & TinyPg {
       const new_event_emitter = new EventEmitter()
 
-      const tiny_overrides: Partial<TinyPg> = {
-         events: new_event_emitter,
-      }
+      const tiny_overrides: Partial<TinyPg> = { events: new_event_emitter }
 
-      return _.create(TinyPg.prototype, _.extend<T.Disposable>({
-         dispose: () => {
-            new_event_emitter.removeAllListeners()
-         },
-      }, this, tiny_overrides))
+      return _.create(
+         TinyPg.prototype,
+         _.extend<T.Disposable>(
+            {
+               dispose: () => {
+                  new_event_emitter.removeAllListeners()
+               },
+            },
+            this,
+            tiny_overrides
+         )
+      )
    }
 
    performDbCall<T = any>(stack_trace_accessor: T.StackTraceAccessor, db_call: DbCall, params: Object): Promise<T.Result<T>> {
       TINYPG_LOG && Util.Log('performDbCall', db_call.config.name)
 
-      return this.getClient()
-      .then((client: Pg.Client) => {
+      return this.getClient().then((client: Pg.PoolClient) => {
          const start_at = Date.now()
 
          const query_context: T.QueryBeginContext = {
@@ -219,7 +223,7 @@ export class TinyPg {
             call_completed = true
 
             if (error && (!error['code'] || _.startsWith(error['code'], '57P'))) {
-               (<any>client).release(error)
+               ;(<any>client).release(error)
             } else {
                client.release()
             }
@@ -236,8 +240,7 @@ export class TinyPg {
             this.events.emit('result', complete_context)
          })
 
-         const query_promise = Promise.resolve()
-         .then(() => {
+         const query_promise = Promise.resolve().then(() => {
             TINYPG_LOG && Util.Log('executing', db_call.config.name)
 
             const values: any[] = _.map(db_call.config.parameter_map, m => {
@@ -249,35 +252,34 @@ export class TinyPg {
             })
 
             const query = db_call.config.prepared
-               ? client.query({ name: db_call.prepared_name, text: db_call.config.parameterized_query, values })
+               ? client.query({
+                    name: db_call.prepared_name,
+                    text: db_call.config.parameterized_query,
+                    values,
+                 })
                : client.query(db_call.config.parameterized_query, values)
 
-            return query
-            .then((query_result: Pg.QueryResult): T.Result<T> => {
+            return query.then((query_result: Pg.QueryResult): T.Result<T> => {
                TINYPG_LOG && Util.Log('execute result', db_call.config.name)
-               return {
-                  row_count: query_result.rowCount,
-                  rows: query_result.rows,
-                  command: query_result.command,
-               }
+               return { row_count: query_result.rowCount, rows: query_result.rows, command: query_result.command }
             })
          })
 
-         return Promise.race([ connection_failed_promise, query_promise ])
-         .then(result => {
-            callComplete(null, result)
-            return result
-         })
-         .catch(error => {
-            callComplete(error, null)
+         return Promise.race([connection_failed_promise, query_promise])
+            .then(result => {
+               callComplete(null, result)
+               return result
+            })
+            .catch(error => {
+               callComplete(error, null)
 
-            const tiny_error = new T.TinyPgError(error.message)
+               const tiny_error = new T.TinyPgError(error.message)
 
-            tiny_error.stack = stack_trace_accessor.stack
-            tiny_error.queryContext = query_context
+               tiny_error.stack = stack_trace_accessor.stack
+               tiny_error.queryContext = query_context
 
-            throw this.options.error_transformer(tiny_error)
-         })
+               throw this.error_transformer(tiny_error)
+            })
       })
    }
 
@@ -285,7 +287,7 @@ export class TinyPg {
       return this.pool.end()
    }
 
-   private getClient(): Promise<Pg.Client> {
+   private getClient(): Promise<Pg.PoolClient> {
       TINYPG_LOG && Util.Log('getClient')
       return this.pool.connect()
    }
@@ -295,7 +297,7 @@ export class TinyPg {
    static pgDefaults = (obj: any) => {
       for (let k in obj) {
          if (obj.hasOwnProperty(k)) {
-            (<any>Pg.defaults)[k] = obj[k]
+            ;(<any>Pg.defaults)[k] = obj[k]
          }
       }
    }
@@ -317,7 +319,9 @@ export class DbCall {
       this.config = config
 
       if (this.config.prepared) {
-         this.prepared_name = `${config.name}_${Util.hashCode(config.parameterized_query).toString().replace('-', 'n')}`.substring(0, 63)
+         this.prepared_name = `${config.name}_${Util.hashCode(config.parameterized_query)
+            .toString()
+            .replace('-', 'n')}`.substring(0, 63)
       }
    }
 }

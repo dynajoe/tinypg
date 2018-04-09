@@ -15,7 +15,7 @@ export function hashCode(str: string): number {
 
    for (let i = 0, l = str.length; i < l; i++) {
       const ch = str.charCodeAt(i)
-      hash = ((hash << 5) - hash) + ch
+      hash = (hash << 5) - hash + ch
       hash |= 0
    }
 
@@ -29,9 +29,8 @@ export function stackTraceAccessor(): T.StackTraceAccessor {
    Object.defineProperty(accessor, 'stack', {
       get() {
          return error.stack.replace(/\s+at .+\.stackTraceAccessor/, '')
-      }
+      },
    })
 
-   return <T.StackTraceAccessor> accessor
+   return <T.StackTraceAccessor>accessor
 }
-

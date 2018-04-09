@@ -16,10 +16,7 @@ describe('parseSql', () => {
    })
 
    it('should return the mapping of postgres vars to names', () => {
-      expect(parse_result.mapping).to.deep.equal([
-         { name: 'id', index: 1 },
-         { name: 'name', index: 2 }
-      ])
+      expect(parse_result.mapping).to.deep.equal([{ name: 'id', index: 1 }, { name: 'name', index: 2 }])
    })
 
    describe('same var multiple times', () => {
@@ -28,15 +25,13 @@ describe('parseSql', () => {
       })
 
       it('should replace the detected variables with postgres variable indexes', () => {
-         expect(parse_result.parameterized_sql).to.equal('SELECT * FROM users where id = $1 and blah = $2 and name = $1 and test = $3 and something = $3')
+         expect(parse_result.parameterized_sql).to.equal(
+            'SELECT * FROM users where id = $1 and blah = $2 and name = $1 and test = $3 and something = $3'
+         )
       })
 
       it('should return the mapping of postgres vars to names', () => {
-         expect(parse_result.mapping).to.deep.equal([
-            { name: 'name', index: 1 },
-            { name: 'blah', index: 2 },
-            { name: 'test', index: 3 }
-         ])
+         expect(parse_result.mapping).to.deep.equal([{ name: 'name', index: 1 }, { name: 'blah', index: 2 }, { name: 'test', index: 3 }])
       })
    })
 
@@ -50,20 +45,17 @@ describe('parseSql', () => {
       })
 
       it('should return the mapping of postgres vars to names', () => {
-         expect(parse_result.mapping).to.deep.equal([
-            { name: 'id', index: 1 },
-            { name: 'name', index: 2 }
-         ])
+         expect(parse_result.mapping).to.deep.equal([{ name: 'id', index: 1 }, { name: 'name', index: 2 }])
       })
    })
 
    describe('vars in a quoted string', () => {
       before(() => {
-         parse_result = P.parseSql('SELECT * FROM users where created_on > \'2011-01-01 10:00:00\'::timestamptz')
+         parse_result = P.parseSql("SELECT * FROM users where created_on > '2011-01-01 10:00:00'::timestamptz")
       })
 
       it('should be ignored', () => {
-         expect(parse_result.parameterized_sql).to.equal('SELECT * FROM users where created_on > \'2011-01-01 10:00:00\'::timestamptz')
+         expect(parse_result.parameterized_sql).to.equal("SELECT * FROM users where created_on > '2011-01-01 10:00:00'::timestamptz")
       })
    })
 
@@ -131,10 +123,7 @@ describe('parseSql', () => {
       })
 
       it('should return the mapping of postgres vars to names', () => {
-         expect(parse_result.mapping).to.deep.equal([
-            { name: 'id.foo', index: 1 },
-            { name: 'name.bar', index: 2 }
-         ])
+         expect(parse_result.mapping).to.deep.equal([{ name: 'id.foo', index: 1 }, { name: 'name.bar', index: 2 }])
       })
    })
 })
@@ -143,7 +132,7 @@ describe('parseFiles', () => {
    let result: T.SqlFile[]
 
    beforeEach(() => {
-      result = P.parseFiles([ Path.join(__dirname, './sql') ])
+      result = P.parseFiles([Path.join(__dirname, './sql')])
    })
 
    it('should parse files', () => {

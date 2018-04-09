@@ -30,6 +30,7 @@ export class TinyPg {
 
       const params = Url.parse(options.connection_string, true)
       const auth = params.auth.split(':')
+      const pool_options = _.isNil(options.pool_options) ? {} : options.pool_options
 
       const pool_config: Pg.PoolConfig = {
          user: auth[0],
@@ -38,6 +39,11 @@ export class TinyPg {
          port: parseInt(params.port, 10),
          database: params.pathname.split('/')[1],
          ssl: params.query.sslmode !== 'disable',
+         connectionTimeoutMillis: pool_options.connection_timeout_ms,
+         idleTimeoutMillis: pool_options.idle_timeout_ms,
+         application_name: pool_options.application_name,
+         max: pool_options.max,
+         min: pool_options.min,
       }
 
       this.pool = new Pg.Pool(pool_config)
@@ -63,7 +69,7 @@ export class TinyPg {
       )
    }
 
-   query<T = any>(raw_sql: string, params: Object = {}): Promise<T.Result<T>> {
+   query<T = any>(raw_sql: string, params: T.TinyPgArguments = {}): Promise<T.Result<T>> {
       const stack_trace_accessor = Util.stackTraceAccessor()
 
       TINYPG_LOG && Util.Log('query')
@@ -83,7 +89,7 @@ export class TinyPg {
       })
    }
 
-   sql<T = any>(name: string, params: Object = {}): Promise<T.Result<T>> {
+   sql<T = any>(name: string, params: T.TinyPgArguments = {}): Promise<T.Result<T>> {
       const stack_trace_accessor = Util.stackTraceAccessor()
 
       TINYPG_LOG && Util.Log('sql', name)
@@ -349,7 +355,7 @@ export class FormattableDbCall {
       return new FormattableDbCall(new_db_call, this.db)
    }
 
-   query<T = any>(params: Object = {}): Promise<T.Result<T>> {
+   query<T = any>(params: T.TinyPgArguments = {}): Promise<T.Result<T>> {
       const stack_trace_accessor = Util.stackTraceAccessor()
 
       return this.db.performDbCall<T>(stack_trace_accessor, this.db_call, params)

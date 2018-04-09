@@ -32,6 +32,8 @@
     "node": ">= 8.0.0"
   },
   "dependencies": {
+    "@types/node": "^8.10.0",
+    "@types/pg": "^7.4.5",
     "glob": "6.0.1",
     "lodash": "4.17.5",
     "node-uuid": "1.4.7",
@@ -41,8 +43,6 @@
     "@types/chai": "3.4.34",
     "@types/lodash": "^4.14.106",
     "@types/mocha": "2.2.41",
-    "@types/node": "^9.6.2",
-    "@types/pg": "^7.4.5",
     "chai": "^3.4.1",
     "mocha": "^3.2.0",
     "pg": "^7.4.1",

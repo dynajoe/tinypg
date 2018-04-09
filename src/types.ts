@@ -1,7 +1,20 @@
 export interface TinyPgOptions {
-   root_dir: string[]
    connection_string: string
-   error_transformer: Function
+   root_dir?: string[]
+   error_transformer?: TinyPgErrorTransformer
+   pool_options?: {
+      max?: number
+      min?: number
+      connection_timeout_ms?: number
+      idle_timeout_ms?: number
+      application_name?: string
+   }
+}
+
+export type TinyPgArgumentType = null | string | number | boolean | object | Date | TinyPgArguments
+
+export interface TinyPgArguments {
+   [key: string]: TinyPgArgumentType
 }
 
 export interface Result<T> {

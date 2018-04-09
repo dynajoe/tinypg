@@ -11,10 +11,23 @@ export interface TinyPgOptions {
    }
 }
 
-export type TinyPgArgumentType = null | string | number | boolean | object | Date | TinyPgArguments
+export type PgPrepareFunction = (TinyPgNativeArgumentType) => PgArgumentType
+
+export type PgArgumentType =
+   | null
+   | undefined
+   | string
+   | number
+   | boolean
+   | object
+   | Buffer
+   | Date
+   | { toPostgres: PgArgumentType }
+   | TinyPgArguments
+   | TinyPgArguments[]
 
 export interface TinyPgArguments {
-   [key: string]: TinyPgArgumentType
+   [key: string]: PgArgumentType
 }
 
 export interface Result<T> {
@@ -28,7 +41,7 @@ export interface QueryBeginContext {
    sql: string
    start: number
    name: string
-   params: Object
+   params: TinyPgArguments
 }
 
 export interface QueryCompleteContext extends QueryBeginContext {

@@ -191,7 +191,7 @@ export class TinyPg {
       )
    }
 
-   performDbCall<T = any>(stack_trace_accessor: T.StackTraceAccessor, db_call: DbCall, params: Object): Promise<T.Result<T>> {
+   performDbCall<T = any>(stack_trace_accessor: T.StackTraceAccessor, db_call: DbCall, params: T.TinyPgArguments): Promise<T.Result<T>> {
       TINYPG_LOG && Util.Log('performDbCall', db_call.config.name)
 
       return this.getClient().then((client: Pg.PoolClient) => {

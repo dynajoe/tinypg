@@ -4,7 +4,7 @@ export { TinyPg, FormattableDbCall } from './tiny'
 
 export { Result, TinyPgOptions, QueryBeginContext, QueryCompleteContext, SqlParseResult, SqlFile } from './types'
 
-export { TinyPgError } from './errors'
+export { TinyPgError, TinyPgErrorTransformer } from './errors'
 
 export { parseSql, parseFiles } from './parser'
 

@@ -336,18 +336,3 @@ export class FormattableDbCall {
       return this.db.performDbCall<T>(this.db_call, params)
    }
 }
-
-export class TinyPgError extends Error {
-   name: string
-   message: string
-   queryContext: any
-
-   constructor(message: string) {
-      super()
-
-      Object.setPrototypeOf(this, TinyPgError.prototype)
-
-      this.name = this.constructor.name
-      this.message = message
-   }
-}

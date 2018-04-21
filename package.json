@@ -16,6 +16,9 @@
     "type": "git",
     "url": "http://github.com/joeandaverde/tinypg.git"
   },
+  "bugs": {
+    "url": "https://github.com/joeandaverde/tinypg/issues"
+  },
   "homepage": "http://github.com/joeandaverde/tinypg",
   "author": "Joe Andaverde",
   "contributors": [
@@ -32,9 +35,8 @@
     "node": ">= 8.0.0"
   },
   "dependencies": {
-    "@types/node": "^8.10.0",
-    "@types/pg": "^7.4.5",
-    "glob": "6.0.1",
+    "debug": "^3.1.0",
+    "glob": "7.1.2",
     "lodash": "4.17.5",
     "node-uuid": "1.4.7",
     "pg-format": "1.0.1"
@@ -43,6 +45,8 @@
     "@types/chai": "3.4.34",
     "@types/lodash": "^4.14.106",
     "@types/mocha": "2.2.41",
+    "@types/node": "^8.10.0",
+    "@types/pg": "^7.4.5",
     "chai": "^3.4.1",
     "mocha": "^3.2.0",
     "pg": "^7.4.1",

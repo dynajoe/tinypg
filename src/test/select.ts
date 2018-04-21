@@ -1,6 +1,6 @@
 import * as H from './helper'
 import { TinyPg } from '../'
-import * as T from '../types'
+import * as E from '../errors'
 import { expect } from 'chai'
 
 describe('Tiny', () => {
@@ -110,7 +110,7 @@ describe('Tiny', () => {
       describe('that have missing parameters', () => {
          it('should perform the replacements', () => {
             return tiny.sql('a.test_missing_params', { a: 'a' }).catch(err => {
-               expect(err).to.be.instanceof(T.TinyPgError)
+               expect(err).to.be.instanceof(E.TinyPgError)
                expect(err).to.have.property('queryContext')
                expect(err.message).to.include('this_is_the_missing_param')
             })
@@ -145,7 +145,7 @@ describe('Tiny', () => {
       describe('that throws an error', () => {
          it('should wrap the error with the queryContext', () => {
             return tiny.sql('a.query_with_error').catch(err => {
-               expect(err).to.be.instanceof(T.TinyPgError)
+               expect(err).to.be.instanceof(E.TinyPgError)
                expect(err).to.have.property('queryContext')
                expect(err.queryContext).to.not.have.property('context')
                expect(err.queryContext.error.code).to.equal('42P01')
@@ -175,7 +175,7 @@ describe('Tiny', () => {
       describe('When an error is thrown', () => {
          it('should have appropriate metadata', () => {
             return tiny.query('SELECT THIS_WILL_THROW_ERROR;').catch(err => {
-               expect(err).to.be.instanceof(T.TinyPgError)
+               expect(err).to.be.instanceof(E.TinyPgError)
                expect(err).to.have.property('queryContext')
                expect(err.queryContext.error.code).to.equal('42703')
                expect(err.queryContext).to.not.have.property('context')

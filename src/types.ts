@@ -1,6 +1,11 @@
+import { EventEmitter } from 'events'
+import { TinyPgErrorTransformer } from './errors'
+import { TlsOptions } from 'tls'
+
 export interface TinyPgOptions {
    connection_string: string
-   root_dir?: string[]
+   tls_options?: TlsOptions
+   root_dir?: string | string[]
    error_transformer?: TinyPgErrorTransformer
    pool_options?: {
       max?: number
@@ -10,8 +15,6 @@ export interface TinyPgOptions {
       application_name?: string
    }
 }
-
-export type PgPrepareFunction = (TinyPgNativeArgumentType) => PgArgumentType
 
 export type PgArgumentType =
    | null
@@ -47,8 +50,8 @@ export interface QueryBeginContext {
 export interface QueryCompleteContext extends QueryBeginContext {
    end: number
    duration: number
-   data: Result<any>
-   error?: Error
+   data: Result<any> | null
+   error: Error | null
 }
 
 export interface SqlParseResult {
@@ -80,28 +83,14 @@ export interface DbCallConfig {
    prepared: boolean
 }
 
-export interface StackTraceAccessor {
-   stack: string
-}
-
-export class TinyPgError extends Error {
-   name: string
-   message: string
-   stack: string
-   queryContext: any
-
-   constructor(message: string) {
-      super()
-
-      Object.setPrototypeOf(this, TinyPgError.prototype)
-
-      this.name = this.constructor.name
-      this.message = message
-   }
-}
-
-export type TinyPgErrorTransformer = (error: TinyPgError) => any
-
 export interface Disposable {
    dispose(): void
+}
+
+export interface TinyPgEvents extends EventEmitter {
+   on(event: 'query', listener: (x: QueryBeginContext) => void): this
+
+   on(event: 'result', listener: (x: QueryCompleteContext) => void): this
+
+   emit(event: 'query' | 'result', ...args: any[]): boolean
 }

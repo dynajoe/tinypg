@@ -1,5 +1,5 @@
 import * as H from './helper'
-import * as T from '../types'
+import * as E from '../errors'
 import { expect } from 'chai'
 
 describe('Multiple root directories', () => {
@@ -17,6 +17,6 @@ describe('Multiple root directories', () => {
          H.newTiny({
             root_dir: [__dirname + '/multi/a_sql', __dirname + '/sql'],
          })
-      }).to.throw(T.TinyPgError)
+      }).to.throw(E.TinyPgError)
    })
 })

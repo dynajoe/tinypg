@@ -1,11 +1,3 @@
-import * as T from './types'
-
-export const LogEnabled = process.env.TINYPG_LOG === 'true'
-
-export function Log(msg: string, ...args: any[]) {
-   console.log(msg, ...args)
-}
-
 export function hashCode(str: string): number {
    let hash = 0
 
@@ -20,17 +12,4 @@ export function hashCode(str: string): number {
    }
 
    return hash
-}
-
-export function stackTraceAccessor(): T.StackTraceAccessor {
-   const accessor = {}
-   const error = new Error()
-
-   Object.defineProperty(accessor, 'stack', {
-      get() {
-         return error.stack.replace(/\s+at .+\.stackTraceAccessor/, '')
-      },
-   })
-
-   return <T.StackTraceAccessor>accessor
 }

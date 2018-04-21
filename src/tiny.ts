@@ -191,7 +191,7 @@ export class TinyPg {
 
       const start_at = Date.now()
 
-      const query_context: T.QueryBeginContext = {
+      const begin_context: T.QueryBeginContext = {
          id: Uuid.v4(),
          sql: db_call.config.parameterized_query,
          start: start_at,
@@ -219,7 +219,7 @@ export class TinyPg {
          client = await this.getClient()
 
          try {
-            this.events.emit('query', query_context)
+            this.events.emit('query', begin_context)
 
             debug('executing', db_call.config.name)
 
@@ -249,28 +249,36 @@ export class TinyPg {
                client.release()
             }
 
-            const tiny_error = new E.TinyPgError(error.message)
-
-            tiny_error.queryContext = query_context
-
-            throw this.error_transformer(tiny_error)
+            throw error
          }
       }
 
-      let error: any
-      let data: T.Result<T> = null
-
-      try {
-         data = await Promise.race([connection_failed_promise, query_promise()])
-         return data
-      } finally {
-         call_completed = true
-
+      const createCompleteContext = (error, data): T.QueryCompleteContext => {
          const end_at = Date.now()
 
-         const query_end_result: T.QueryCompleteContext = { ...query_context, end: end_at, duration: end_at - start_at, error: error, data: data }
+         return {
+            ...begin_context,
+            end: end_at,
+            duration: end_at - start_at,
+            error: error,
+            data: data,
+         }
+      }
 
-         this.events.emit('result', query_end_result)
+      try {
+         const data = await Promise.race([connection_failed_promise, query_promise()])
+
+         this.events.emit('result', createCompleteContext(null, data))
+
+         return data
+      } catch (e) {
+         const tiny_error = new E.TinyPgError(e.message, createCompleteContext(e, null))
+
+         this.events.emit('result', tiny_error.queryContext)
+
+         throw this.error_transformer(tiny_error)
+      } finally {
+         call_completed = true
       }
    }
 

@@ -79,7 +79,7 @@ describe('Tiny', () => {
             expect(onResultData).not.to.be.null
 
             expect(onQueryData.name).to.equal('a_select')
-            expect(onQueryData.duration).to.be.least(0)
+            expect(onResultData.duration).to.be.least(0)
 
             tiny.events.removeAllListeners()
 

@@ -142,9 +142,9 @@ export class TinyPg {
             return assertThennable(tx_fn(tiny_tx))
          }
 
-         tiny_tx.getClient = () => {
+         tiny_tx.getClient = async () => {
             log('getClient (transaction)')
-            return Promise.resolve(tx_client)
+            return tx_client
          }
 
          const result = await assertThennable(tx_fn(tiny_tx))

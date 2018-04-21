@@ -16,9 +16,7 @@ export interface TinyPgOptions {
    }
 }
 
-export type TinyPgNativeArguments = null | undefined | string | number | boolean | object | Buffer | Date
-
-export type TinyPgArguments = TinyPgNativeArguments | { [key: string]: TinyPgNativeArguments } | TinyPgNativeArguments[]
+export type TinyPgArguments = undefined | null | object | { [key: string]: null | undefined | string | number | boolean | object | Buffer | Date }
 
 export interface Result<T> {
    rows: T[]

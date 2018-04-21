@@ -289,7 +289,7 @@ export class TinyPg {
    }
 
    private getClient(): Promise<Pg.PoolClient> {
-      log('getClient')
+      log(`getClient [total=${this.pool.totalCount},waiting=${this.pool.waitingCount},idle=${this.pool.idleCount}]`)
       return this.pool.connect()
    }
 }

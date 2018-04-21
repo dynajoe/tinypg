@@ -253,7 +253,7 @@ export class TinyPg {
          }
       }
 
-      const createCompleteContext = (error, data): T.QueryCompleteContext => {
+      const createCompleteContext = (error: any, data: T.Result<T>): T.QueryCompleteContext => {
          const end_at = Date.now()
 
          return {

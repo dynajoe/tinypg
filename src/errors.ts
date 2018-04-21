@@ -5,11 +5,12 @@ export class TinyPgError extends Error {
    message: string
    queryContext: any
 
-   constructor(message: string, query_context?: any) {
+   constructor(message: string, stack?: string, query_context?: any) {
       super()
 
       Object.setPrototypeOf(this, TinyPgError.prototype)
 
+      this.stack = stack
       this.name = this.constructor.name
       this.message = message
       this.queryContext = query_context

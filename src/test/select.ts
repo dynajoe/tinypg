@@ -153,14 +153,13 @@ describe('Tiny', () => {
             })
          })
 
-         it('should have the correct stack trace', () => {
-            const thisShouldBeInStack = () => {
-               return tiny.sql('a.query_with_error').catch(err => {
-                  expect(err.stack).to.include('thisShouldBeInStack')
+         it('should have information about the query', () => {
+            return tiny
+               .sql('a.query_with_error')
+               .then(() => expect.fail('not supposed to succeed'))
+               .catch(err => {
+                  expect(err.stack).to.include('query_with_error')
                })
-            }
-
-            return thisShouldBeInStack()
          })
       })
    })
@@ -184,13 +183,12 @@ describe('Tiny', () => {
          })
 
          it('should have the correct stack trace', () => {
-            const thisShouldBeInStack = () => {
-               return tiny.query('SELECT THIS_WILL_THROW_ERROR;').catch(err => {
-                  expect(err.stack).to.include('thisShouldBeInStack')
+            return tiny
+               .query('SELECT THIS_WILL_THROW_ERROR;')
+               .then(() => expect.fail('not supposed to succeed'))
+               .catch(err => {
+                  expect(err.stack).to.include('THIS_WILL_THROW_ERROR')
                })
-            }
-
-            return thisShouldBeInStack()
          })
       })
    })

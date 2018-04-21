@@ -272,7 +272,8 @@ export class TinyPg {
 
          return data
       } catch (e) {
-         const tiny_error = new E.TinyPgError(e.message, createCompleteContext(e, null))
+         const tiny_stack = `[${db_call.config.name}]\n\n${db_call.config.text}\n\n${e.stack}`
+         const tiny_error = new E.TinyPgError(`${e.message}`, tiny_stack, createCompleteContext(e, null))
 
          this.events.emit('result', tiny_error.queryContext)
 

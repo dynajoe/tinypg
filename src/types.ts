@@ -16,22 +16,9 @@ export interface TinyPgOptions {
    }
 }
 
-export type PgArgumentType =
-   | null
-   | undefined
-   | string
-   | number
-   | boolean
-   | object
-   | Buffer
-   | Date
-   | { toPostgres: PgArgumentType }
-   | TinyPgArguments
-   | TinyPgArguments[]
+export type TinyPgNativeArguments = null | undefined | string | number | boolean | object | Buffer | Date
 
-export interface TinyPgArguments {
-   [key: string]: PgArgumentType
-}
+export type TinyPgArguments = TinyPgNativeArguments | { [key: string]: TinyPgNativeArguments } | TinyPgNativeArguments[]
 
 export interface Result<T> {
    rows: T[]
@@ -93,4 +80,10 @@ export interface TinyPgEvents extends EventEmitter {
    on(event: 'result', listener: (x: QueryCompleteContext) => void): this
 
    emit(event: 'query' | 'result', ...args: any[]): boolean
+}
+
+declare module 'pg' {
+   export interface PoolConfig {
+      log?: any
+   }
 }

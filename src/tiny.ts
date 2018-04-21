@@ -10,7 +10,9 @@ import * as E from './errors'
 const Uuid = require('node-uuid')
 const PgFormat = require('pg-format')
 
-const debug = require('debug')('tinypg')
+const Debug = require('debug')
+
+const log = Debug('tinypg')
 
 export class TinyPg {
    public events: T.TinyPgEvents
@@ -43,12 +45,13 @@ export class TinyPg {
          application_name: pool_options.application_name,
          max: pool_options.max,
          min: pool_options.min,
+         log: Debug('tinypg:pool'),
       }
 
       this.pool = new Pg.Pool(pool_config)
 
       this.pool.on('error', error => {
-         debug('Error with idle client in pool.', error)
+         log('Error with idle client in pool.', error)
       })
 
       this.sql_files = P.parseFiles(_.compact(_.castArray(options.root_dir)))
@@ -84,7 +87,7 @@ export class TinyPg {
    }
 
    async sql<T = any>(name: string, params: T.TinyPgArguments = {}): Promise<T.Result<T>> {
-      debug('sql', name)
+      log('sql', name)
 
       const db_call: DbCall = this.sql_db_calls[name]
 
@@ -106,7 +109,7 @@ export class TinyPg {
    }
 
    async transaction<T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T> {
-      debug('transaction')
+      log('transaction')
 
       const tx_client = await this.getClient()
 
@@ -114,13 +117,13 @@ export class TinyPg {
       tx_client.release = () => {}
 
       const release = () => {
-         debug('RELEASE transaction client')
+         log('RELEASE transaction client')
          tx_client.release = release_ref
          tx_client.release()
       }
 
       try {
-         debug('BEGIN transaction')
+         log('BEGIN transaction')
 
          await tx_client.query('BEGIN')
 
@@ -135,24 +138,24 @@ export class TinyPg {
          }
 
          tiny_tx.transaction = <T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T> => {
-            debug('inner transaction')
+            log('inner transaction')
             return assertThennable(tx_fn(tiny_tx))
          }
 
          tiny_tx.getClient = () => {
-            debug('getClient (transaction)')
+            log('getClient (transaction)')
             return Promise.resolve(tx_client)
          }
 
          const result = await assertThennable(tx_fn(tiny_tx))
 
-         debug('COMMIT transaction')
+         log('COMMIT transaction')
 
          await tx_client.query('COMMIT')
 
          return result
       } catch (error) {
-         debug('ROLLBACK transaction')
+         log('ROLLBACK transaction')
          await tx_client.query('ROLLBACK')
          throw error
       } finally {
@@ -184,7 +187,7 @@ export class TinyPg {
    }
 
    async performDbCall<T = any>(db_call: DbCall, params: T.TinyPgArguments): Promise<T.Result<T>> {
-      debug('performDbCall', db_call.config.name)
+      log('performDbCall', db_call.config.name)
 
       let call_completed = false
       let client: Pg.PoolClient
@@ -217,11 +220,12 @@ export class TinyPg {
 
       const query_promise = async (): Promise<T.Result<T>> => {
          client = await this.getClient()
+         let error: any = null
 
          try {
             this.events.emit('query', begin_context)
 
-            debug('executing', db_call.config.name)
+            log('executing', db_call.config.name)
 
             const values: any[] = _.map(db_call.config.parameter_map, m => {
                if (!_.has(params, m.name)) {
@@ -239,17 +243,18 @@ export class TinyPg {
                  })
                : await client.query(db_call.config.parameterized_query, values)
 
-            debug('execute result', db_call.config.name)
+            log('execute result', db_call.config.name)
 
             return { row_count: result.rowCount, rows: result.rows, command: result.command }
-         } catch (error) {
+         } catch (e) {
+            error = e
+            throw e
+         } finally {
             if (!_.isNil(error) && (!error['code'] || _.startsWith(error['code'], '57P'))) {
                client.release(error)
             } else {
                client.release()
             }
-
-            throw error
          }
       }
 
@@ -284,7 +289,7 @@ export class TinyPg {
    }
 
    private getClient(): Promise<Pg.PoolClient> {
-      debug('getClient')
+      log('getClient')
       return this.pool.connect()
    }
 }

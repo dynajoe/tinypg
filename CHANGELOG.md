@@ -16,6 +16,8 @@
 
 * Expose postgres pool as a property on new TinyPg instance.
 
+* Expose `getClient() : Promise<Pg.PoolClient>` to get a client from the pool. It's up to you to release it. This allow usage of the node postgres query interface directly. Calling this method on a `TinyPg` instance in a transaction will always return the same client.
+
 * Better options parsing with sensible defaults.
 
 * Refactor internals to use async/await.

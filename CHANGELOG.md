@@ -1,6 +1,6 @@
 # 3.0.0
 
-* Move node-postgres to peer dependency. Hopefully, this allows consumers to address security issues in the module quicker and have control over it default configuration.
+* Move node-postgres to peer dependency. Hopefully, this allows consumers to address security issues in the module quicker and have control over its default configuration.
 
 * Upgrade node-engine to latest
 

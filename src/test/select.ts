@@ -193,6 +193,25 @@ describe('Tiny', () => {
       })
    })
 
+   describe('types', () => {
+      it('should fall back to any if no type param is specified', () => {
+         const tiny = H.newTiny()
+
+         interface R {
+            a: number
+            b: number
+         }
+
+         const fn = (): Promise<R> => {
+            return tiny.sql('a.test_nested', { a: { foo: 1 } }).then(res => {
+               return { ...res.rows[0] }
+            })
+         }
+
+         return fn()
+      })
+   })
+
    it('should allow creating an instance of tiny without directory', () => {
       const tiny = new TinyPg({
          connection_string: H.connection_string,

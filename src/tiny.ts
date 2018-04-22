@@ -71,7 +71,7 @@ export class TinyPg {
       )
    }
 
-   async query<T = any>(raw_sql: string, params: T.TinyPgArguments = {}): Promise<T.Result<T>> {
+   async query<T extends object = any, P extends object = T.TinyPgParams>(raw_sql: string, params?: P): Promise<T.Result<T>> {
       const parsed = P.parseSql(raw_sql)
 
       const db_call = new DbCall({
@@ -83,10 +83,10 @@ export class TinyPg {
          prepared: false,
       })
 
-      return this.performDbCall(db_call, params)
+      return this.performDbCall<T>(db_call, params)
    }
 
-   async sql<T = any>(name: string, params: T.TinyPgArguments = {}): Promise<T.Result<T>> {
+   async sql<T extends object = any, P extends object = T.TinyPgParams>(name: string, params?: P): Promise<T.Result<T>> {
       log('sql', name)
 
       const db_call: DbCall = this.sql_db_calls[name]
@@ -186,7 +186,7 @@ export class TinyPg {
       return this.pool.end()
    }
 
-   async performDbCall<T = any>(db_call: DbCall, params: T.TinyPgArguments): Promise<T.Result<T>> {
+   async performDbCall<T extends object = any, P extends object = T.TinyPgParams>(db_call: DbCall, params?: P): Promise<T.Result<T>> {
       log('performDbCall', db_call.config.name)
 
       let call_completed = false
@@ -261,13 +261,7 @@ export class TinyPg {
       const createCompleteContext = (error: any, data: T.Result<T>): T.QueryCompleteContext => {
          const end_at = Date.now()
 
-         return {
-            ...begin_context,
-            end: end_at,
-            duration: end_at - start_at,
-            error: error,
-            data: data,
-         }
+         return { ...begin_context, end: end_at, duration: end_at - start_at, error: error, data: data }
       }
 
       try {
@@ -302,9 +296,10 @@ export class DbCall {
       this.config = config
 
       if (this.config.prepared) {
-         this.prepared_name = `${config.name}_${Util.hashCode(config.parameterized_query)
+         const hash_code = Util.hashCode(config.parameterized_query)
             .toString()
-            .replace('-', 'n')}`.substring(0, 63)
+            .replace('-', 'n')
+         this.prepared_name = `${config.name}_${hash_code}`.substring(0, 63)
       }
    }
 }
@@ -332,7 +327,7 @@ export class FormattableDbCall {
       return new FormattableDbCall(new_db_call, this.db)
    }
 
-   query<T = any>(params: T.TinyPgArguments = {}): Promise<T.Result<T>> {
+   query<T extends object = any>(params: T.TinyPgParams = {}): Promise<T.Result<T>> {
       return this.db.performDbCall<T>(this.db_call, params)
    }
 }

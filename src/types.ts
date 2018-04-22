@@ -16,9 +16,11 @@ export interface TinyPgOptions {
    }
 }
 
-export type TinyPgArguments = undefined | null | object | { [key: string]: null | undefined | string | number | boolean | object | Buffer | Date }
+export type TinyPgPrimitive = string | number | boolean | object | Buffer | Date
 
-export interface Result<T> {
+export type TinyPgParams = undefined | null | object | { [key: string]: null | undefined | TinyPgPrimitive | TinyPgPrimitive[] }
+
+export interface Result<T extends object> {
    rows: T[]
    command: string
    row_count: number
@@ -29,7 +31,7 @@ export interface QueryBeginContext {
    sql: string
    start: number
    name: string
-   params: TinyPgArguments
+   params: TinyPgParams
 }
 
 export interface QueryCompleteContext extends QueryBeginContext {

@@ -186,6 +186,11 @@ export class TinyPg {
       return this.pool.end()
    }
 
+   getClient(): Promise<Pg.PoolClient> {
+      log(`getClient [total=${this.pool.totalCount},waiting=${this.pool.waitingCount},idle=${this.pool.idleCount}]`)
+      return this.pool.connect()
+   }
+
    async performDbCall<T extends object = any, P extends object = T.TinyPgParams>(db_call: DbCall, params?: P): Promise<T.Result<T>> {
       log('performDbCall', db_call.config.name)
 
@@ -280,11 +285,6 @@ export class TinyPg {
       } finally {
          call_completed = true
       }
-   }
-
-   private getClient(): Promise<Pg.PoolClient> {
-      log(`getClient [total=${this.pool.totalCount},waiting=${this.pool.waitingCount},idle=${this.pool.idleCount}]`)
-      return this.pool.connect()
    }
 }
 

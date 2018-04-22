@@ -6,84 +6,105 @@ import * as E from './errors'
 
 const Glob = require('glob')
 
+type ParserStateKey = 'query' | 'string-constant' | 'line-comment' | 'block-comment' | 'consuming-ident' | 'skip-next'
+
+interface ParserState {
+   key: ParserStateKey
+   data?: any
+}
+
+const Token = {
+   COLON: ':',
+   BACK_SLASH: '\\',
+   FORWARD_SLASH: '/',
+   SINGLE_QUOTE: "'",
+   DASH: '-',
+   STAR: '*',
+   NEW_LINE: '\n',
+}
+
+const IdentRegex = /\w|\./
+
+const IdentStartRegex = /\w/
+
 export function parseSql(sql: string): T.SqlParseResult {
-   const validStartChar = /\w/
-   const validChar = /(\w|\.)/
-   const result: string[] = []
-   const mapping: T.ParamMapping[] = []
-   const keys: Record<string, T.ParamMapping> = {}
+   let state: ParserState = { key: 'query' }
+   let param_mapping: T.ParamMapping[] = []
+   let result = ''
 
-   let singleLineComment = false
-   let multiLineComment = 0
-   let consumeVar = false
-   let buffer: string[] = []
-   let varIdx: number = 0
-   let inString = false
-
-   const pushVar = () => {
-      const name = buffer.join('')
-
-      if (keys[name]) {
-         result.push(`$${keys[name].index}`)
-      } else {
-         varIdx++
-
-         keys[name] = {
-            index: varIdx,
-            name: buffer.join(''),
+   const pushParam = () => {
+      if (state.key === 'consuming-ident') {
+         if (!_.some(param_mapping, m => m.name === state.data)) {
+            const next_index = _.size(param_mapping) + 1
+            param_mapping.push({ name: state.data, index: next_index })
          }
 
-         mapping.push(keys[name])
-         result.push(`$${varIdx}`)
-      }
-
-      buffer = []
-      consumeVar = false
-   }
-
-   const pushText = () => {
-      result.push(buffer.join(''))
-      buffer = []
-   }
-
-   for (let i = 0; i < sql.length; i++) {
-      const c = sql[i]
-      const n = sql[i + 1]
-      const p = sql[i - 1]
-
-      if (!multiLineComment && !singleLineComment && c === "'" && p !== '\\') {
-         inString = !inString
-      } else if (!inString && c === '-' && p === '-') {
-         singleLineComment = true
-      } else if (singleLineComment && c === '\n') {
-         singleLineComment = false
-      } else if (c === '*' && p === '/') {
-         multiLineComment++
-      } else if (c === '/' && p === '*') {
-         multiLineComment = Math.max(0, multiLineComment - 1)
-      }
-
-      if (inString || singleLineComment || multiLineComment > 0) {
-         buffer.push(c)
-      } else {
-         if (consumeVar && !validChar.test(c)) {
-            pushVar()
-         } else if (c === ':' && p !== ':' && validStartChar.test(n)) {
-            consumeVar = true
-            pushText()
-            continue
-         }
-
-         buffer.push(c)
+         result += `$${_.find(param_mapping, m => m.name === state.data).index}`
       }
    }
 
-   consumeVar ? pushVar() : pushText()
+   for (let i = 0; i < _.size(sql); i++) {
+      const ctx = { current: sql[i], previous: sql[i - 1], next: sql[i + 1] }
 
-   return {
-      parameterized_sql: result.join(''),
-      mapping: mapping,
+      switch (state.key) {
+         case 'query':
+            if (ctx.current === Token.COLON && ctx.previous != Token.COLON && IdentStartRegex.test(ctx.next)) {
+               state = { key: 'consuming-ident', data: '' }
+            } else if (ctx.current === Token.SINGLE_QUOTE && ctx.previous !== Token.BACK_SLASH) {
+               result += ctx.current
+               state = { key: 'string-constant' }
+            } else if (ctx.current === Token.DASH && ctx.next === Token.DASH) {
+               result += ctx.current + ctx.next
+               state = { key: 'skip-next', data: { key: 'line-comment' } }
+            } else if (ctx.current === Token.FORWARD_SLASH && ctx.next === Token.STAR) {
+               result += ctx.current + ctx.next
+               state = { key: 'skip-next', data: { key: 'block-comment' } }
+            } else {
+               result += ctx.current
+            }
+            break
+         case 'block-comment':
+            result += ctx.current
+
+            if (ctx.previous === Token.STAR && ctx.current === Token.FORWARD_SLASH) {
+               state = { key: 'query' }
+            }
+            break
+         case 'line-comment':
+            result += ctx.current
+
+            if (ctx.current === Token.NEW_LINE) {
+               state = { key: 'query' }
+            }
+            break
+         case 'string-constant':
+            result += ctx.current
+
+            if (ctx.current === Token.SINGLE_QUOTE && ctx.previous !== Token.BACK_SLASH) {
+               state = { key: 'query' }
+            }
+            break
+         case 'consuming-ident':
+            if (IdentRegex.test(ctx.current)) {
+               state = { ...state, data: state.data + ctx.current }
+            } else {
+               pushParam()
+               result += ctx.current
+               state = { key: 'query' }
+            }
+            break
+         case 'skip-next':
+            state = state.data
+            break
+         default:
+            const _exhaustive_check: never = state.key
+            return _exhaustive_check
+      }
    }
+
+   pushParam()
+
+   return { parameterized_sql: result, mapping: param_mapping }
 }
 
 export function parseFiles(root_directories: string[]): T.SqlFile[] {

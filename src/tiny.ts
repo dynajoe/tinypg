@@ -21,10 +21,12 @@ export class TinyPg {
 
    private error_transformer: E.TinyPgErrorTransformer
    private sql_files: T.SqlFile[]
+   private options: T.TinyPgOptions
 
    constructor(options: T.TinyPgOptions) {
       this.events = new EventEmitter()
       this.error_transformer = _.isFunction(options.error_transformer) ? options.error_transformer : _.identity
+      this.options = options
 
       const params = Url.parse(options.connection_string, true)
       const [user, password] = _.isNil(params.auth) ? ['postgres', undefined] : params.auth.split(':', 2)
@@ -72,30 +74,91 @@ export class TinyPg {
    }
 
    async query<T extends object = any, P extends object = T.TinyPgParams>(raw_sql: string, params?: P): Promise<T.Result<T>> {
-      const parsed = P.parseSql(raw_sql)
+      return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
+         const parsed = P.parseSql(raw_sql)
 
-      const db_call = new DbCall({
-         name: 'raw_query',
-         key: null,
-         text: raw_sql,
-         parameterized_query: parsed.parameterized_sql,
-         parameter_map: parsed.mapping,
-         prepared: false,
+         const db_call = new DbCall({
+            name: 'raw_query',
+            key: null,
+            text: raw_sql,
+            parameterized_query: parsed.parameterized_sql,
+            parameter_map: parsed.mapping,
+            prepared: false,
+         })
+
+         return await this.performDbCall<T>(db_call, params)
       })
-
-      return this.performDbCall<T>(db_call, params)
    }
 
    async sql<T extends object = any, P extends object = T.TinyPgParams>(name: string, params?: P): Promise<T.Result<T>> {
-      log('sql', name)
+      return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
+         log('sql', name)
 
-      const db_call: DbCall = this.sql_db_calls[name]
+         const db_call: DbCall = this.sql_db_calls[name]
 
-      if (_.isNil(db_call)) {
-         throw new Error(`Sql query with name [${name}] not found!`)
-      }
+         if (_.isNil(db_call)) {
+            throw new Error(`Sql query with name [${name}] not found!`)
+         }
 
-      return this.performDbCall<T>(db_call, params)
+         return this.performDbCall<T>(db_call, params)
+      })
+   }
+
+   async transaction<T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T> {
+      return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
+         log('transaction')
+
+         const tx_client = await this.getClient()
+
+         const release_ref = tx_client.release
+         tx_client.release = () => {}
+
+         const release = () => {
+            log('RELEASE transaction client')
+            tx_client.release = release_ref
+            tx_client.release()
+         }
+
+         try {
+            log('BEGIN transaction')
+
+            await tx_client.query('BEGIN')
+
+            const tiny_tx: TinyPg = Object.create(this)
+
+            const assertThennable = (tx_fn_result: any) => {
+               if (_.isNil(tx_fn_result) || !_.isFunction(tx_fn_result.then)) {
+                  throw new Error('Expected thennable to be returned from transaction function.')
+               }
+
+               return tx_fn_result
+            }
+
+            tiny_tx.transaction = <T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T> => {
+               log('inner transaction')
+               return assertThennable(tx_fn(tiny_tx))
+            }
+
+            tiny_tx.getClient = async () => {
+               log('getClient (transaction)')
+               return tx_client
+            }
+
+            const result = await assertThennable(tx_fn(tiny_tx))
+
+            log('COMMIT transaction')
+
+            await tx_client.query('COMMIT')
+
+            return result
+         } catch (error) {
+            log('ROLLBACK transaction')
+            await tx_client.query('ROLLBACK')
+            throw error
+         } finally {
+            release()
+         }
+      })
    }
 
    formattable(name: string): FormattableDbCall {
@@ -106,61 +169,6 @@ export class TinyPg {
       }
 
       return new FormattableDbCall(db_call, this)
-   }
-
-   async transaction<T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T> {
-      log('transaction')
-
-      const tx_client = await this.getClient()
-
-      const release_ref = tx_client.release
-      tx_client.release = () => {}
-
-      const release = () => {
-         log('RELEASE transaction client')
-         tx_client.release = release_ref
-         tx_client.release()
-      }
-
-      try {
-         log('BEGIN transaction')
-
-         await tx_client.query('BEGIN')
-
-         const tiny_tx: TinyPg = Object.create(this)
-
-         const assertThennable = (tx_fn_result: any) => {
-            if (_.isNil(tx_fn_result) || !_.isFunction(tx_fn_result.then)) {
-               throw new Error('Expected thennable to be returned from transaction function.')
-            }
-
-            return tx_fn_result
-         }
-
-         tiny_tx.transaction = <T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T> => {
-            log('inner transaction')
-            return assertThennable(tx_fn(tiny_tx))
-         }
-
-         tiny_tx.getClient = async () => {
-            log('getClient (transaction)')
-            return tx_client
-         }
-
-         const result = await assertThennable(tx_fn(tiny_tx))
-
-         log('COMMIT transaction')
-
-         await tx_client.query('COMMIT')
-
-         return result
-      } catch (error) {
-         log('ROLLBACK transaction')
-         await tx_client.query('ROLLBACK')
-         throw error
-      } finally {
-         release()
-      }
    }
 
    isolatedEmitter(): T.Disposable & TinyPg {

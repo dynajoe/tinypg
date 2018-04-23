@@ -7,6 +7,7 @@ export interface TinyPgOptions {
    tls_options?: TlsOptions
    root_dir?: string | string[]
    error_transformer?: TinyPgErrorTransformer
+   capture_stack_trace?: boolean
    pool_options?: {
       max?: number
       min?: number

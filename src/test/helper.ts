@@ -1,4 +1,4 @@
-import { TinyPg } from '../'
+import { TinyPg, TinyPgOptions } from '../'
 import * as Pg from 'pg'
 
 export const connection_string = 'postgres://postgres@localhost:5432/?sslmode=disable'
@@ -36,7 +36,7 @@ export function setUpDb(): Promise<any> {
    }, Promise.resolve())
 }
 
-export function newTiny(options: any = {}): TinyPg {
+export function newTiny(options?: Partial<TinyPgOptions>): TinyPg {
    return new TinyPg({
       connection_string: connection_string,
       root_dir: __dirname + '/sql/',

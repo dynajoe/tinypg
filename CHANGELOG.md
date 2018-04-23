@@ -4,7 +4,9 @@
 
 * Upgrade node-engine to latest
 
-* Stop capturing stack trace for every database invocation. Doing this was a major performance penalty. Now when errors are thrown the query name and contents are added to the `TinyPgError` stack.
+* Stop capturing stack trace for every database invocation by default. Set `capture_stack_trace` option to true to get concatenated stack trace.
+
+* When errors are thrown the query name and contents are added to the `TinyPgError` stack.
 
 * Improve exposed types across the board
 

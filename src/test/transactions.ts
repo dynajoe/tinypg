@@ -44,6 +44,22 @@ describe('Transactions', () => {
                })
             })
       })
+
+      describe('When an error is thrown', () => {
+         it('should have the correct stack trace', () => {
+            const thisShouldBeInStack = () => {
+               return H.newTiny({ capture_stack_trace: true }).transaction(tx_db => {
+                  return tx_db.sql('a.test_missing_params')
+               })
+            }
+
+            return thisShouldBeInStack()
+               .then(() => expect.fail('this should not succeed'))
+               .catch(err => {
+                  expect(err.stack).to.include('thisShouldBeInStack')
+               })
+         })
+      })
    })
 
    describe('Raw queries', () => {
@@ -88,6 +104,22 @@ describe('Transactions', () => {
             .catch(error => {
                expect(error.message).to.contain('thennable')
             })
+      })
+
+      describe('When an error is thrown', () => {
+         it('should have the correct stack trace', () => {
+            const thisShouldBeInStack = () => {
+               return H.newTiny({ capture_stack_trace: true }).transaction(tx_db => {
+                  return tx_db.query('SELECT 1/0;')
+               })
+            }
+
+            return thisShouldBeInStack()
+               .then(() => expect.fail('this should not succeed'))
+               .catch(err => {
+                  expect(err.stack).to.include('thisShouldBeInStack')
+               })
+         })
       })
    })
 

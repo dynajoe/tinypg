@@ -13,3 +13,25 @@ export function hashCode(str: string): number {
 
    return hash
 }
+
+export async function stackTraceAccessor<T>(is_enabled: boolean, fn: () => Promise<T>): Promise<T> {
+   if (!is_enabled) {
+      return fn()
+   }
+
+   const accessor: { stack: string } = { stack: null }
+   const stack_trace_error = new Error(`TinyPg Captured Stack Trace`)
+
+   Object.defineProperty(accessor, 'stack', {
+      get() {
+         return stack_trace_error.stack.replace(/\s+at .+\.stackTraceAccessor/, '')
+      },
+   })
+
+   try {
+      return await fn()
+   } catch (error) {
+      error.stack = `${error.stack ? `${error.stack}\nFrom: ` : ''}${stack_trace_error.stack}`
+      throw error
+   }
+}

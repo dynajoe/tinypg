@@ -6,7 +6,15 @@ import * as E from './errors'
 
 const Glob = require('glob')
 
-type ParserStateKey = 'query' | 'string-constant' | 'line-comment' | 'block-comment' | 'consuming-ident' | 'skip-next'
+type ParserStateKey =
+   | 'query'
+   | 'quoted-ident'
+   | 'string-constant'
+   | 'line-comment'
+   | 'block-comment'
+   | 'consuming-ident'
+   | 'skip-next'
+   | 'dollar-quote-literal'
 
 interface ParserState {
    key: ParserStateKey
@@ -21,11 +29,13 @@ const Token = {
    DASH: '-',
    STAR: '*',
    NEW_LINE: '\n',
+   DOLLAR: '$',
+   DOUBLE_QUOTE: '"',
 }
 
 const IdentRegex = /\w|\./
 
-const IdentStartRegex = /\w/
+const IdentStartRegex = /[a-zA-Z_]/
 
 export function parseSql(sql: string): T.SqlParseResult {
    let state: ParserState = { key: 'query' }
@@ -43,7 +53,9 @@ export function parseSql(sql: string): T.SqlParseResult {
       }
    }
 
-   for (let i = 0; i < _.size(sql); i++) {
+   const text_length = _.size(sql)
+
+   for (let i = 0; i < text_length; i++) {
       const ctx = { current: sql[i], previous: sql[i - 1], next: sql[i + 1] }
 
       switch (state.key) {
@@ -58,7 +70,13 @@ export function parseSql(sql: string): T.SqlParseResult {
                state = { key: 'skip-next', data: { key: 'line-comment' } }
             } else if (ctx.current === Token.FORWARD_SLASH && ctx.next === Token.STAR) {
                result += ctx.current + ctx.next
-               state = { key: 'skip-next', data: { key: 'block-comment' } }
+               state = { key: 'skip-next', data: { key: 'block-comment', data: 1 } }
+            } else if (ctx.current === Token.DOLLAR && ctx.previous === Token.DOLLAR) {
+               result += ctx.current
+               state = { key: 'dollar-quote-literal' }
+            } else if (ctx.current === Token.DOUBLE_QUOTE) {
+               result += ctx.current
+               state = { key: 'quoted-ident' }
             } else {
                result += ctx.current
             }
@@ -67,7 +85,11 @@ export function parseSql(sql: string): T.SqlParseResult {
             result += ctx.current
 
             if (ctx.previous === Token.STAR && ctx.current === Token.FORWARD_SLASH) {
-               state = { key: 'query' }
+               if (state.data - 1 === 0) {
+                  state = { key: 'query' }
+               } else {
+                  state = { ...state, data: state.data - 1 }
+               }
             }
             break
          case 'line-comment':
@@ -90,6 +112,20 @@ export function parseSql(sql: string): T.SqlParseResult {
             } else {
                pushParam()
                result += ctx.current
+               state = { key: 'query' }
+            }
+            break
+         case 'dollar-quote-literal':
+            result += ctx.current
+
+            if (ctx.current === Token.DOLLAR && ctx.previous === Token.DOLLAR) {
+               state = { key: 'query' }
+            }
+            break
+         case 'quoted-ident':
+            result += ctx.current
+
+            if (ctx.current === Token.DOUBLE_QUOTE) {
                state = { key: 'query' }
             }
             break

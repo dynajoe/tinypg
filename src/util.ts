@@ -19,14 +19,7 @@ export async function stackTraceAccessor<T>(is_enabled: boolean, fn: () => Promi
       return fn()
    }
 
-   const accessor: { stack: string } = { stack: null }
    const stack_trace_error = new Error(`TinyPg Captured Stack Trace`)
-
-   Object.defineProperty(accessor, 'stack', {
-      get() {
-         return stack_trace_error.stack.replace(/\s+at .+\.stackTraceAccessor/, '')
-      },
-   })
 
    try {
       return await fn()

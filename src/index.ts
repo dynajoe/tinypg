@@ -1,24 +1,11 @@
 import { TinyPg } from './tiny'
 
-export
-   { TinyPg
-   , FormattableDbCall
-   } from './tiny'
+export { TinyPg, FormattableDbCall } from './tiny'
 
-export
-   { Result
-   , TinyPgOptions
-   , TinyPgError
-   , QueryBeginContext
-   , QueryCompleteContext
-   , SqlParseResult
-   , SqlFile
-   } from './types'
+export { Result, TinyPgOptions, QueryBeginContext, QueryCompleteContext, SqlParseResult, SqlFile } from './types'
 
-export
-   { parseSql
-   , parseFiles
-   } from './parser'
+export { TinyPgError, TinyPgErrorTransformer } from './errors'
+
+export { parseSql, parseFiles } from './parser'
 
 export default TinyPg
-

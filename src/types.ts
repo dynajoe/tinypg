@@ -1,10 +1,27 @@
+import { EventEmitter } from 'events'
+import { TinyPgErrorTransformer } from './errors'
+import { TlsOptions } from 'tls'
+
 export interface TinyPgOptions {
-   root_dir: string[]
    connection_string: string
-   error_transformer: Function
+   tls_options?: TlsOptions
+   root_dir?: string | string[]
+   error_transformer?: TinyPgErrorTransformer
+   capture_stack_trace?: boolean
+   pool_options?: {
+      max?: number
+      min?: number
+      connection_timeout_ms?: number
+      idle_timeout_ms?: number
+      application_name?: string
+   }
 }
 
-export interface Result<T> {
+export type TinyPgPrimitive = string | number | boolean | object | Buffer | Date
+
+export type TinyPgParams = undefined | null | object | { [key: string]: null | undefined | TinyPgPrimitive | TinyPgPrimitive[] }
+
+export interface Result<T extends object> {
    rows: T[]
    command: string
    row_count: number
@@ -15,14 +32,14 @@ export interface QueryBeginContext {
    sql: string
    start: number
    name: string
-   params: Object
+   params: TinyPgParams
 }
 
 export interface QueryCompleteContext extends QueryBeginContext {
    end: number
    duration: number
-   data: Result<any>
-   error?: Error
+   data: Result<any> | null
+   error: Error | null
 }
 
 export interface SqlParseResult {
@@ -54,26 +71,20 @@ export interface DbCallConfig {
    prepared: boolean
 }
 
-export interface StackTraceAccessor {
-   stack: string
-}
-
-export class TinyPgError extends Error {
-   name: string
-   message: string
-   stack: string
-   queryContext: any
-
-   constructor(message: string) {
-      super()
-
-      Object.setPrototypeOf(this, TinyPgError.prototype)
-
-      this.name = this.constructor.name
-      this.message = message
-   }
-}
-
 export interface Disposable {
    dispose(): void
+}
+
+export interface TinyPgEvents extends EventEmitter {
+   on(event: 'query', listener: (x: QueryBeginContext) => void): this
+
+   on(event: 'result', listener: (x: QueryCompleteContext) => void): this
+
+   emit(event: 'query' | 'result', ...args: any[]): boolean
+}
+
+declare module 'pg' {
+   export interface PoolConfig {
+      log?: any
+   }
 }

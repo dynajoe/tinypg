@@ -15,13 +15,12 @@
         "noFallthroughCasesInSwitch": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "outDir": "dist",
-        "typeRoots": [
-            "node_modules/@types"
-        ],
-        "types": [
-            "@types/node"
-        ]
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "allowUnusedLabels": false,
+        "strict": true,
+        "strictNullChecks": false,
+        "outDir": "dist"
     },
     "compileOnSave": false,
     "files": [
@@ -31,8 +30,5 @@
         "node_modules",
         ".vscode",
         "dist"
-    ],
-    "atom": {
-        "rewriteTsconfig": false
-    }
+    ]
 }

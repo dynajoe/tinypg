@@ -1,4 +1,4 @@
-const TinyPg = require('../').TinyPg
+const TinyPg = require('../dist').TinyPg
 
 const db = new TinyPg({
    connection_string: 'postgres://postgres@localhost:5432/mydb',

@@ -1,11 +1,3 @@
-import * as T from './types'
-
-export const LogEnabled = process.env.TINYPG_LOG === 'true'
-
-export function Log(msg: string, ...args: any[]) {
-   console.log(msg, ...args)
-}
-
 export function hashCode(str: string): number {
    let hash = 0
 
@@ -15,23 +7,24 @@ export function hashCode(str: string): number {
 
    for (let i = 0, l = str.length; i < l; i++) {
       const ch = str.charCodeAt(i)
-      hash = ((hash << 5) - hash) + ch
+      hash = (hash << 5) - hash + ch
       hash |= 0
    }
 
    return hash
 }
 
-export function stackTraceAccessor(): T.StackTraceAccessor {
-   const accessor = {}
-   const error = new Error()
+export async function stackTraceAccessor<T>(is_enabled: boolean, fn: () => Promise<T>): Promise<T> {
+   if (!is_enabled) {
+      return fn()
+   }
 
-   Object.defineProperty(accessor, 'stack', {
-      get() {
-         return error.stack.replace(/\s+at .+\.stackTraceAccessor/, '')
-      }
-   })
+   const stack_trace_error = new Error(`TinyPg Captured Stack Trace`)
 
-   return <T.StackTraceAccessor> accessor
+   try {
+      return await fn()
+   } catch (error) {
+      error.stack = `${error.stack ? `${error.stack}\nFrom: ` : ''}${stack_trace_error.stack}`
+      throw error
+   }
 }
-

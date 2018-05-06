@@ -4,7 +4,7 @@ TinyPg makes it possible to use objects as the source for parameters in a query.
 
 ```typescript
 db.query(`
-SELECT * 
+SELECT *
 FROM customer
    INNER JOIN address ON address.customer_id = customer.customer_id
 WHERE address.state = :state
@@ -13,12 +13,12 @@ WHERE address.state = :state
 `, {
    first_name: 'Joe',
    last_name: 'Andaverde',
-   state: 'Kansas', 
+   state: 'Kansas',
 })
 ```
 
 ## SQL files over embedded strings
-Now that we're past the mess of managing parameters the next step is organizing our SQL statements. It's kind of ugly to embed SQL in your JavaScript syntax. TinyPg allows for specifying a directory for which it will load all files with the `.sql` extension. The path to the file will normalized into a key for which you can look up and execute the SQL in the file as a prepared statement. For our projects we have hundreds of different SQL queries. It's worth noting that we don't subscribe to tools that generate SQL on your behalf. Many of our queries require use of Postgres features that no SQL generator can provide. Therefore, we don't bother trying to force these libraries to be smarter and stick to the language that's best suited for retrieving data from relational data stores: SQL. 
+Now that we're past the mess of managing parameters the next step is organizing our SQL statements. It's kind of ugly to embed SQL in your JavaScript syntax. TinyPg allows for specifying a directory for which it will load all files with the `.sql` extension. The path to the file will normalized into a key for which you can look up and execute the SQL in the file as a prepared statement. For our projects we have hundreds of different SQL queries. It's worth noting that we don't subscribe to tools that generate SQL on your behalf. Many of our queries require use of Postgres features that no SQL generator can provide. Therefore, we don't bother trying to force these libraries to be smarter and stick to the language that's best suited for retrieving data from relational data stores: SQL.
 
 Consider the following directory structure:
 
@@ -40,39 +40,40 @@ db.sql('customer.search', {
    first_name: 'Joe',
    last_name: 'Andaverde',
    state: 'Kansas',
-}) 
+})
 ```
 
-TinyPg checks for the existence of required parameters when each query is executed. Instead of placing db null in will fail with an error message describing the missing parameter. I highly recommend using an object literal to specify parameter in order to use some of the static analysis tools like tslint or the VS Code plugin.
+TinyPg checks for the existence of required parameters when each query is executed. Instead of placing db null in it will fail with an error message describing the missing parameter. I highly recommend using an object literal to specify parameter in order to use some of the static analysis tools like tslint or the VS Code plugin.
 
 ## Transaction support
 
 If you've ever looked at handling transactions with node-postgres you'll quickly realize that it's easy to get into deadlock. Tiny handles the re-use of the same connection for all queries performed within the same transaction provided you use the new database object provided by the call to *.transaction*. Here's how to create a customer and associate an address in the same transaction.
 
 ```typescript
-db.transaction(transaction_db => { // BEGIN
-   return transaction_db.sql('customer.create', { // INSERT
+db.transaction(async transaction_db => { // BEGIN
+   const create_result = await transaction_db.sql('customer.create', { // INSERT
       first_name: 'Joe',
       last_name: 'Andaverde',
    })
-   .then(result => {
-      const customer = result.rows[0]
 
-      return transaction_db.sql('address.create', { // INSERT
-         customer_id: customer.customer_id,
-         street: '123 W 10th St',
-         city: 'Shawnee',
-         state: 'Kansas',
-         zip: 66666,
-      })
-   .then(() => customer.customer_id)
+   const customer = create_result.rows[0]
+
+   await transaction_db.sql('address.create', { // INSERT
+      customer_id: customer.customer_id,
+      street: '123 W SomeStreet',
+      city: 'SomeCity',
+      state: 'SomeState',
+      zip: 12345,
    })
+
+   return customer.customer_id
 }) // COMMIT
-.then(customer_id => {
-   return db.sql('customer.fetch', { // SELECT
+.then(async customer_id => {
+   const fetch_result = await db.sql('customer.fetch', { // SELECT
       customer_id: customer_id,
    })
-   .then(result => result.rows[0])
+
+   return fetch_result.rows[0]
 })
 ```
 
@@ -129,6 +130,10 @@ If you're using TypeScript in your project (which I highly recommend) you can ge
 - __root_dir: string[]__ - a list of directories. All directories must be specified using the full path.
 - __connection_string: string__ - The database connection string in URL format. e.g. postgres://user:password@host:port/database?options=query
 - __error_transformer: Function__ - Allows transforming all errors from TinyPg to your domain.
+- __capture_stack_trace: boolean__ - Opt-in to capturing stack trace to give a better indication of what function in your domain caused an error.
+- __tls_options__ - TLS options passed to the underlying socket.
+- __pool_options__: (See [node-pg-pool](https://github.com/brianc/node-pg-pool) - only difference is casing)
+
 ### Example error_transformer
 
 ```typescript
@@ -167,12 +172,12 @@ const error_transformer = (error) => {
 
 See [Pg Error Codes Documentation](https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html)
 
-## query<T = any>(raw_sql: string, params?: Object): Promise<T.Result<T>>
+## query<TResult,TParams>(raw_sql: string, params?: Object): Promise<T.Result<T>>
 
 - __raw_sql: string__ - The SQL query to execute.
 - __params: Object__ (optional) - parameters for the query.
 
-## sql<T = any>(name: string, params?: Object): Promise<T.Result<T>>
+## sql<TResult,TParams>(name: string, params?: Object): Promise<T.Result<T>>
 
 - __name: string__ - The key of the sql file. This is the path to the file substituting `.` for path delimiter. e.g. `users.create`
 
@@ -186,13 +191,13 @@ Select a SQL file that has formattable parts. See [node-pg-format](https://githu
 
 database/users/retrieve.sql
 ```sql
-SELECT * 
+SELECT *
 FROM users
-WHERE last_name = :last_name 
+WHERE last_name = :last_name
 ORDER BY
   -- Custom ordering
   %s
-  
+
   user_id DESC;
 ```
 
@@ -207,19 +212,19 @@ db.formattable('users.retrieve')
 Resulting Query
 
 ```sql
-SELECT * 
+SELECT *
 FROM users
-WHERE last_name = :last_name 
+WHERE last_name = :last_name
 ORDER BY
   -- Custom ordering
   last_name ASC,
- 
+
   user_id DESC;
 ```
 
 ## transaction<T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T>
 
-Starts a database transaction and ensures all queries executed against the provided TinyPg instance use the same client. 
+Starts a database transaction and ensures all queries executed against the provided TinyPg instance use the same client.
 
 - __tx_fn: (db: TinyPg) => Promise<T>__ - Provides db to perform transacted queries.
 
@@ -235,7 +240,7 @@ Shuts down the postgres client pool.
 
 You should have a local development Postgres server running. This server must allow connections from the `postgres` user without password. If this isn't the behavior your want change the connection string in `src/test/helper.ts`.
 
-```bash 
+```bash
 npm install
 npm test
 ```

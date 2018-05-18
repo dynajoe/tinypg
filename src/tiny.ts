@@ -42,6 +42,7 @@ export class TinyPg {
          port: port,
          database: database,
          ssl: enable_ssl ? _.defaultTo(options.tls_options, true) : false,
+         keepAlive: pool_options.keep_alive,
          connectionTimeoutMillis: pool_options.connection_timeout_ms,
          idleTimeoutMillis: pool_options.idle_timeout_ms,
          application_name: pool_options.application_name,

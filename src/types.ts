@@ -15,6 +15,7 @@ export interface TinyPgOptions {
       idle_timeout_ms?: number
       application_name?: string
       statement_timeout_ms?: number
+      keep_alive?: boolean
    }
 }
 

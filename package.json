@@ -1,6 +1,6 @@
 {
   "name": "tinypg",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Easy way to call sql files using postgres.",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -22,7 +22,8 @@
   "homepage": "http://github.com/joeandaverde/tinypg",
   "author": "Joe Andaverde",
   "contributors": [
-    "Scott Smerchek"
+    "Scott Smerchek",
+    "Alex Munda"
   ],
   "keywords": [
     "postgres",
@@ -51,6 +52,7 @@
     "mocha": "^3.2.0",
     "pg": "^7.4.1",
     "rimraf": "^2.6.0",
+    "source-map-support": "0.5.6",
     "typescript": "2.8.1"
   },
   "peerDependencies": {

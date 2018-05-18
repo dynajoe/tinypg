@@ -14,6 +14,7 @@ export interface TinyPgOptions {
       connection_timeout_ms?: number
       idle_timeout_ms?: number
       application_name?: string
+      statement_timeout_ms?: number
    }
 }
 
@@ -86,5 +87,6 @@ export interface TinyPgEvents extends EventEmitter {
 declare module 'pg' {
    export interface PoolConfig {
       log?: any
+      statement_timeout?: number
    }
 }

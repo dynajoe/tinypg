@@ -45,6 +45,7 @@ export class TinyPg {
          connectionTimeoutMillis: pool_options.connection_timeout_ms,
          idleTimeoutMillis: pool_options.idle_timeout_ms,
          application_name: pool_options.application_name,
+         statement_timeout: pool_options.statement_timeout_ms,
          max: pool_options.max,
          min: pool_options.min,
          log: Debug('tinypg:pool'),

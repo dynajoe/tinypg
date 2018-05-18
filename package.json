@@ -22,7 +22,8 @@
   "homepage": "http://github.com/joeandaverde/tinypg",
   "author": "Joe Andaverde",
   "contributors": [
-    "Scott Smerchek"
+    "Scott Smerchek",
+    "Alex Munda"
   ],
   "keywords": [
     "postgres",
@@ -39,7 +40,8 @@
     "glob": "7.1.2",
     "lodash": "4.17.5",
     "node-uuid": "1.4.7",
-    "pg-format": "1.0.1"
+    "pg-format": "1.0.1",
+    "source-map-support": "0.5.6"
   },
   "devDependencies": {
     "@types/chai": "3.4.34",

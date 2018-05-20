@@ -6,6 +6,7 @@ export interface TinyPgOptions {
    connection_string: string
    tls_options?: TlsOptions
    root_dir?: string | string[]
+   use_prepared_statements?: boolean
    error_transformer?: TinyPgErrorTransformer
    capture_stack_trace?: boolean
    pool_options?: {

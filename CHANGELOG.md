@@ -1,3 +1,17 @@
+# 4.0.0
+
+By default, sql files will **no longer be prepared statements**. To enable this feature set the option `use_prepared_statements` to `true`.
+
+The reasoning behind this change is to support connection pooling with a tool like [PgBouncer](https://github.com/pgbouncer/pgbouncer). Using PgBouncer results in a high possibility that a prepared statement will not be available to the executing session. See explanation [by depesz here](https://www.depesz.com/2012/12/02/what-is-the-point-of-bouncing/).
+
+* Added `use_prepared_statements` : boolean
+
+# 3.0.1
+
+* More pool configuration options
+   * Added `statement_timeout_ms` : number
+   * Added `keep_alive` : boolean pg pool options
+
 # 3.0.0
 
 * Move node-postgres to peer dependency. Hopefully, this allows consumers to address security issues in the module quicker and have control over its default configuration.

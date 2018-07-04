@@ -66,7 +66,7 @@ export class TinyPg {
                name: sql_file.name,
                key: sql_file.key,
                text: sql_file.text,
-               parameterized_query: sql_file.parsed.parameterized_sql,
+               query: sql_file.parsed.statement,
                parameter_map: sql_file.parsed.mapping,
                prepared: _.defaultTo(options.use_prepared_statements, false),
             })
@@ -76,6 +76,8 @@ export class TinyPg {
    }
 
    async query<T extends object = any, P extends object = T.TinyPgParams>(raw_sql: string, params?: P): Promise<T.Result<T>> {
+      log('query')
+
       return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
          const parsed = P.parseSql(raw_sql)
 
@@ -83,33 +85,68 @@ export class TinyPg {
             name: 'raw_query',
             key: null,
             text: raw_sql,
-            parameterized_query: parsed.parameterized_sql,
+            query: parsed.statement,
             parameter_map: parsed.mapping,
             prepared: false,
          })
 
-         return await this.performDbCall<T>(db_call, params)
+         return _.first(await this.performDbCall<T>(db_call, params))
       })
    }
 
    async sql<T extends object = any, P extends object = T.TinyPgParams>(name: string, params?: P): Promise<T.Result<T>> {
+      log('sql', name)
+
+      const db_call: DbCall = this.sql_db_calls[name]
+
+      if (_.isNil(db_call)) {
+         throw new Error(`Sql query with name [${name}] not found!`)
+      }
+
       return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
-         log('sql', name)
+         return _.first(await this.performDbCall<T>(db_call, params))
+      })
+   }
 
-         const db_call: DbCall = this.sql_db_calls[name]
+   async queryMany(raw_sql: string): Promise<T.Result<any>[]> {
+      log('queryMany')
 
-         if (_.isNil(db_call)) {
-            throw new Error(`Sql query with name [${name}] not found!`)
-         }
+      return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
+         const db_call = new DbCall({
+            name: 'raw_query',
+            key: null,
+            text: raw_sql,
+            query: raw_sql,
+            parameter_map: [],
+            prepared: false,
+         })
 
-         return this.performDbCall<T>(db_call, params)
+         return await this.performDbCall(db_call)
+      })
+   }
+
+   async sqlMany(name: string): Promise<T.Result<any>[]> {
+      log('sqlMany', name)
+
+      const db_call: DbCall = this.sql_db_calls[name]
+
+      if (!_.isEmpty(db_call.config.parameter_map)) {
+         throw new Error(`Cannot perform multiple statements with parameterized queries.`)
+      }
+
+      if (_.isNil(db_call)) {
+         throw new Error(`Sql query with name [${name}] not found!`)
+      }
+
+      return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
+         return this.performDbCall(db_call)
       })
    }
 
    async transaction<T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T> {
-      return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
-         log('transaction')
+      log('transaction')
 
+      return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
          const tx_client = await this.getClient()
 
          const release_ref = tx_client.release
@@ -193,6 +230,7 @@ export class TinyPg {
    }
 
    close(): Promise<void> {
+      log('close')
       return this.pool.end()
    }
 
@@ -201,7 +239,7 @@ export class TinyPg {
       return this.pool.connect()
    }
 
-   async performDbCall<T extends object = any, P extends object = T.TinyPgParams>(db_call: DbCall, params?: P): Promise<T.Result<T>> {
+   async performDbCall<T extends object = any, P extends object = T.TinyPgParams>(db_call: DbCall, params?: P): Promise<T.Result<T>[]> {
       log('performDbCall', db_call.config.name)
 
       let call_completed = false
@@ -211,7 +249,7 @@ export class TinyPg {
 
       const begin_context: T.QueryBeginContext = {
          id: Uuid.v4(),
-         sql: db_call.config.parameterized_query,
+         sql: db_call.config.query,
          start: start_at,
          name: db_call.config.name,
          params,
@@ -233,7 +271,7 @@ export class TinyPg {
          setTimeout(checkForConnection, 500)
       })
 
-      const query_promise = async (): Promise<T.Result<T>> => {
+      const query_promise = async (): Promise<T.Result<T>[]> => {
          client = await this.getClient()
          let error: any = null
 
@@ -253,14 +291,18 @@ export class TinyPg {
             const result = db_call.config.prepared
                ? await client.query({
                     name: db_call.prepared_name,
-                    text: db_call.config.parameterized_query,
+                    text: db_call.config.query,
                     values,
                  })
-               : await client.query(db_call.config.parameterized_query, values)
+               : await client.query(db_call.config.query, values)
 
             log('execute result', db_call.config.name)
 
-            return { row_count: result.rowCount, rows: result.rows, command: result.command }
+            if (_.isArray(result)) {
+               return result.map(x => ({ row_count: x.rowCount, rows: x.rows, command: x.command }))
+            }
+
+            return [{ row_count: result.rowCount, rows: result.rows, command: result.command }]
          } catch (e) {
             error = e
             throw e
@@ -273,7 +315,7 @@ export class TinyPg {
          }
       }
 
-      const createCompleteContext = (error: any, data: T.Result<T>): T.QueryCompleteContext => {
+      const createCompleteContext = (error: any, data: T.Result<T>[]): T.QueryCompleteContext => {
          const end_at = Date.now()
 
          return { ...begin_context, end: end_at, duration: end_at - start_at, error: error, data: data }
@@ -306,7 +348,7 @@ export class DbCall {
       this.config = config
 
       if (this.config.prepared) {
-         const hash_code = Util.hashCode(config.parameterized_query)
+         const hash_code = Util.hashCode(config.query)
             .toString()
             .replace('-', 'n')
          this.prepared_name = `${config.name}_${hash_code}`.substring(0, 63)
@@ -330,14 +372,22 @@ export class FormattableDbCall {
       const new_db_call = new DbCall({
          ...this.db_call.config,
          text: formatted_sql,
-         parameterized_query: parsed.parameterized_sql,
+         query: parsed.statement,
          parameter_map: parsed.mapping,
       })
 
       return new FormattableDbCall(new_db_call, this.db)
    }
 
-   query<T extends object = any>(params: T.TinyPgParams = {}): Promise<T.Result<T>> {
-      return this.db.performDbCall<T>(this.db_call, params)
+   async query<T extends object = any>(params: T.TinyPgParams = {}): Promise<T.Result<T>> {
+      return _.first(await this.db.performDbCall<T>(this.db_call, params))
+   }
+
+   async queryMany(): Promise<T.Result<any>[]> {
+      if (!_.isEmpty(this.db_call.config.parameter_map)) {
+         throw new Error(`Cannot perform multiple statements with parameterized queries.`)
+      }
+
+      return this.db.performDbCall(this.db_call)
    }
 }

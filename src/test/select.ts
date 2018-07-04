@@ -172,6 +172,14 @@ describe('Tiny', () => {
             })
          })
       })
+
+      describe('multiple statements', () => {
+         it('should support multiple statements as a result array', async () => {
+            const result = await tiny.sqlMany('a.multi_statement')
+            expect(result).to.have.length(2)
+            expect(result.map(x => x.rows[0])).to.deep.equal([{ result1_col1: 1 }, { result2_col1: 2, result2_col2: 3 }])
+         })
+      })
    })
 
    describe('Raw queries', () => {
@@ -209,6 +217,17 @@ describe('Tiny', () => {
             return thisShouldBeInStack().catch(err => {
                expect(err.stack).to.include('thisShouldBeInStack')
             })
+         })
+      })
+
+      describe('multiple statements', () => {
+         it('should support multiple statements as a result array', async () => {
+            const result = await tiny.queryMany(`
+               SELECT 1 as result1_col1;
+               SELECT 2 as result2_col1, 3 result2_col2;
+            `)
+            expect(result).to.have.length(2)
+            expect(result.map(x => x.rows[0])).to.deep.equal([{ result1_col1: 1 }, { result2_col1: 2, result2_col2: 3 }])
          })
       })
    })

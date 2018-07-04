@@ -41,12 +41,12 @@ export interface QueryBeginContext {
 export interface QueryCompleteContext extends QueryBeginContext {
    end: number
    duration: number
-   data: Result<any> | null
+   data: Result<any>[] | null
    error: Error | null
 }
 
 export interface SqlParseResult {
-   parameterized_sql: string
+   statement: string
    mapping: ParamMapping[]
 }
 
@@ -69,7 +69,7 @@ export interface DbCallConfig {
    name: string
    key: string | null
    parameter_map: ParamMapping[]
-   parameterized_query: string
+   query: string
    text: string
    prepared: boolean
 }

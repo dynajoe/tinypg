@@ -12,7 +12,7 @@ describe('parseSql', () => {
    })
 
    it('should replace the detected variables with postgres variable indexes', () => {
-      expect(parse_result.parameterized_sql).to.equal('SELECT * FROM users where id = $1 and name = $2')
+      expect(parse_result.statement).to.equal('SELECT * FROM users where id = $1 and name = $2')
    })
 
    it('should return the mapping of postgres vars to names', () => {
@@ -25,9 +25,7 @@ describe('parseSql', () => {
       })
 
       it('should replace the detected variables with postgres variable indexes', () => {
-         expect(parse_result.parameterized_sql).to.equal(
-            'SELECT * FROM users where id = $1 and blah = $2 and name = $1 and test = $3 and something = $3'
-         )
+         expect(parse_result.statement).to.equal('SELECT * FROM users where id = $1 and blah = $2 and name = $1 and test = $3 and something = $3')
       })
 
       it('should return the mapping of postgres vars to names', () => {
@@ -41,7 +39,7 @@ describe('parseSql', () => {
       })
 
       it('should replace the detected variables with postgres variable indexes', () => {
-         expect(parse_result.parameterized_sql).to.equal('SELECT * FROM users where id = $1::int and name = $2::text')
+         expect(parse_result.statement).to.equal('SELECT * FROM users where id = $1::int and name = $2::text')
       })
 
       it('should return the mapping of postgres vars to names', () => {
@@ -55,7 +53,7 @@ describe('parseSql', () => {
       })
 
       it('should be ignored', () => {
-         expect(parse_result.parameterized_sql).to.equal("SELECT * FROM users where created_on > '2011-01-01 10:00:00'::timestamptz")
+         expect(parse_result.statement).to.equal("SELECT * FROM users where created_on > '2011-01-01 10:00:00'::timestamptz")
       })
    })
 
@@ -67,7 +65,7 @@ describe('parseSql', () => {
             WHERE created_on > '2011-01-01 10:00:00'::timestamptz
          `)
 
-         expect(parsed.parameterized_sql).to.equal(`
+         expect(parsed.statement).to.equal(`
             SELECT * FROM users
             -- Ignore all things who aren't after a certain date
             WHERE created_on > '2011-01-01 10:00:00'::timestamptz
@@ -83,7 +81,7 @@ describe('parseSql', () => {
             WHERE created_on > '2011-01-01 10:00:00'::timestamptz
          `)
 
-         expect(parsed.parameterized_sql).to.equal(`
+         expect(parsed.statement).to.equal(`
             SELECT * FROM users
             /* Ignore all things who aren't after a certain :date
              * More lines
@@ -103,7 +101,7 @@ describe('parseSql', () => {
             WHERE some_text LIKE 'foo -- bar' AND :date::timestamptz
          `)
 
-         expect(parsed.parameterized_sql).to.equal(`
+         expect(parsed.statement).to.equal(`
             SELECT * FROM users
             /* Ignore all things who aren't after a certain :date
              * More lines
@@ -121,7 +119,7 @@ describe('parseSql', () => {
             WHERE some_text LIKE 'foo -- bar' AND :date::timestamptz
          `)
 
-         expect(parsed.parameterized_sql).to.equal(`
+         expect(parsed.statement).to.equal(`
             SELECT * FROM users
             /* Ignore all things who aren't after a certain :date
              * More lines /* nested block comment
@@ -137,7 +135,7 @@ describe('parseSql', () => {
       })
 
       it('should replace the detected variables with postgres variable indexes', () => {
-         expect(parse_result.parameterized_sql).to.equal('SELECT * FROM users where id = $1 and name = $2')
+         expect(parse_result.statement).to.equal('SELECT * FROM users where id = $1 and name = $2')
       })
 
       it('should return the mapping of postgres vars to names', () => {
@@ -150,7 +148,7 @@ describe('parseSql', () => {
 
       _.forEach(unaltered_items, sql => {
          it(`should not alter [${sql}]`, () => {
-            expect(P.parseSql(sql).parameterized_sql).to.equal(sql)
+            expect(P.parseSql(sql).statement).to.equal(sql)
          })
       })
    })
@@ -171,7 +169,7 @@ describe('parseSql', () => {
 
       _.forEach(unaltered_items, sql => {
          it(`should not alter [${sql}]`, () => {
-            expect(P.parseSql(sql).parameterized_sql).to.equal(sql)
+            expect(P.parseSql(sql).statement).to.equal(sql)
          })
       })
    })
@@ -185,7 +183,7 @@ describe('parseSql', () => {
 
       _.forEach(unaltered_items, sql => {
          it(`should not alter [${sql}]`, () => {
-            expect(P.parseSql(sql).parameterized_sql).to.equal(sql)
+            expect(P.parseSql(sql).statement).to.equal(sql)
          })
       })
    })
@@ -195,7 +193,7 @@ describe('parseSql', () => {
 
       _.forEach(unaltered_items, sql => {
          it(`should not alter [${sql}]`, () => {
-            expect(P.parseSql(sql).parameterized_sql).to.equal(sql)
+            expect(P.parseSql(sql).statement).to.equal(sql)
          })
       })
    })

@@ -1,3 +1,17 @@
+# 5.0.0
+
+Add support for multiple result sets via `queryMany` or `sqlMany`. These calls do not take parameters because Postgres does not support parameters when running multiple statements.
+
+**Breaking**
+
+#### External
+`QueryCompleteContext.data` is now a `Result[]` rather than `Result`.
+
+#### Internal
+`SqlParseResult.parameterized_sql` renamed to `SqlParseResult.state`.
+`DbCallConfig.parameterized_query` renamed to `DbCallConfig.query`.
+`performDbCall` now returns an array of `Result`.
+
 # 4.0.0
 
 By default, sql files will **no longer be prepared statements**. To enable this feature set the option `use_prepared_statements` to `true`.

@@ -230,7 +230,7 @@ Starts a database transaction and ensures all queries executed against the provi
 
 ## isolatedEmitter(): T.Disposable & TinyPg
 
-Provides an isolated event emitter so that `result` and `query` events can be monitored for all queries related to the new TinyPg instance.
+Provides an isolated event emitter so that `query`, `submit`, and `result` events (in that order) can be monitored for all queries related to the new TinyPg instance.
 
 ## close(): Promise<void>
 

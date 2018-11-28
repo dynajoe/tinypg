@@ -76,33 +76,52 @@ export class TinyPg {
    }
 
    async query<T extends object = any, P extends object = T.TinyPgParams>(raw_sql: string, params?: P): Promise<T.Result<T>> {
+      const [transformed_sql, transformed_params] = this.options.hooks.preSql(raw_sql, params)
+
       return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
          const parsed = P.parseSql(raw_sql)
 
          const db_call = new DbCall({
             name: 'raw_query',
             key: null,
-            text: raw_sql,
+            text: transformed_sql,
             parameterized_query: parsed.parameterized_sql,
             parameter_map: parsed.mapping,
             prepared: false,
          })
 
-         return await this.performDbCall<T>(db_call, params)
+         return await this.performDbCall<T>(db_call, transformed_params)
       })
    }
 
-   async sql<T extends object = any, P extends object = T.TinyPgParams>(name: string, params?: P): Promise<T.Result<T>> {
-      return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
-         log('sql', name)
+   withHooks(hooks: T.TinyHooks): TinyPg {
+      const new_tiny = Object.create(this) as TinyPg
+      const original_tiny = this
 
-         const db_call: DbCall = this.sql_db_calls[name]
+      new_tiny.options.hooks = <any>_.mapValues(this.options.hooks, (v, k) => {
+         return function() {
+            const prior_hook_results = v.apply(original_tiny, ...arguments)
+
+            return (<any>hooks)[k].apply(new_tiny, ...prior_hook_results)
+         }
+      })
+
+      return new_tiny
+   }
+
+   async sql<T extends object = any, P extends object = T.TinyPgParams>(name: string, params?: P): Promise<T.Result<T>> {
+      const [query_name, query_params] = this.options.hooks.preSql(name, params)
+
+      return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
+         log('sql', query_name)
+
+         const db_call: DbCall = this.sql_db_calls[query_name]
 
          if (_.isNil(db_call)) {
-            throw new Error(`Sql query with name [${name}] not found!`)
+            throw new Error(`Sql query with name [${query_name}] not found!`)
          }
 
-         return this.performDbCall<T>(db_call, params)
+         return this.performDbCall<T>(db_call, query_params)
       })
    }
 

@@ -2,6 +2,10 @@ import { EventEmitter } from 'events'
 import { TinyPgErrorTransformer } from './errors'
 import { TlsOptions } from 'tls'
 
+export interface TinyHooks {
+   preSql: (name: string, params: any) => [string, any]
+}
+
 export interface TinyPgOptions {
    connection_string: string
    tls_options?: TlsOptions
@@ -9,6 +13,7 @@ export interface TinyPgOptions {
    use_prepared_statements?: boolean
    error_transformer?: TinyPgErrorTransformer
    capture_stack_trace?: boolean
+   hooks: TinyHooks
    pool_options?: {
       max?: number
       min?: number

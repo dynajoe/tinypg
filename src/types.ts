@@ -38,9 +38,15 @@ export interface QueryBeginContext {
    params: TinyPgParams
 }
 
-export interface QueryCompleteContext extends QueryBeginContext {
+export interface QuerySubmitContext extends QueryBeginContext {
+   wait_duration: number
+   submit: number
+}
+
+export interface QueryCompleteContext extends QuerySubmitContext {
    end: number
    duration: number
+   active_duration: number
    data: Result<any> | null
    error: Error | null
 }
@@ -83,7 +89,9 @@ export interface TinyPgEvents extends EventEmitter {
 
    on(event: 'result', listener: (x: QueryCompleteContext) => void): this
 
-   emit(event: 'query' | 'result', ...args: any[]): boolean
+   on(event: 'submit', listener: (x: QuerySubmitContext) => void): this
+
+   emit(event: 'query' | 'submit' | 'result', ...args: any[]): boolean
 }
 
 declare module 'pg' {

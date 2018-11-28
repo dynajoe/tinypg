@@ -2,6 +2,7 @@ import * as H from './helper'
 import { TinyPg } from '../'
 import * as E from '../errors'
 import { expect } from 'chai'
+import * as T from '../types'
 
 describe('Tiny', () => {
    let tiny: TinyPg
@@ -63,11 +64,16 @@ describe('Tiny', () => {
       })
 
       it('should emit events', () => {
-         let onQueryData: any
-         let onResultData: any
+         let onQueryData: T.QueryBeginContext
+         let onResultData: T.QueryCompleteContext
+         let onSubmitData: T.QuerySubmitContext
 
          tiny.events.on('query', (e: any) => {
             onQueryData = e
+         })
+
+         tiny.events.on('submit', (e: any) => {
+            onSubmitData = e
          })
 
          tiny.events.on('result', (e: any) => {
@@ -76,9 +82,12 @@ describe('Tiny', () => {
 
          return tiny.sql('a.select').then(res => {
             expect(onQueryData).not.to.be.null
+            expect(onSubmitData).not.to.be.null
             expect(onResultData).not.to.be.null
 
             expect(onQueryData.name).to.equal('a_select')
+            expect(onSubmitData.submit).to.be.least(onQueryData.start)
+            expect(onSubmitData.wait_duration).to.be.least(0)
             expect(onResultData.duration).to.be.least(0)
 
             tiny.events.removeAllListeners()

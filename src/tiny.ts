@@ -217,6 +217,8 @@ export class TinyPg {
          params,
       }
 
+      let submit_context: T.QuerySubmitContext = null
+
       // Work around node-postgres swallowing queries after a connection error
       // https://github.com/brianc/node-postgres/issues/718
       const connection_failed_promise = new Promise<any>((resolve, reject) => {
@@ -250,13 +252,27 @@ export class TinyPg {
                return _.get(params, m.name)
             })
 
-            const result = db_call.config.prepared
-               ? await client.query({
+            const query: Pg.Submittable & { callback: (err: Error, result: Pg.QueryResult) => void } = db_call.config.prepared
+               ? (<any>Pg.Query)({
                     name: db_call.prepared_name,
                     text: db_call.config.parameterized_query,
                     values,
                  })
-               : await client.query(db_call.config.parameterized_query, values)
+               : (<any>Pg.Query)(db_call.config.parameterized_query, values)
+
+            const original_submit = query.submit
+
+            query.submit = (connection: any) => {
+               const submitted_at = Date.now()
+               submit_context = { ...begin_context, submit: submitted_at, wait_duration: submitted_at - begin_context.start }
+               this.events.emit('submit', submit_context)
+               original_submit.call(query, connection)
+            }
+
+            const result = await new Promise<Pg.QueryResult>((resolve, reject) => {
+               query.callback = (err, res) => (err ? reject(err) : resolve(res))
+               client.query(query)
+            })
 
             log('execute result', db_call.config.name)
 
@@ -275,8 +291,28 @@ export class TinyPg {
 
       const createCompleteContext = (error: any, data: T.Result<T>): T.QueryCompleteContext => {
          const end_at = Date.now()
+         const query_duration = end_at - start_at
 
-         return { ...begin_context, end: end_at, duration: end_at - start_at, error: error, data: data }
+         const timings = _.isNil(submit_context)
+            ? {
+                 submit: null,
+                 wait_duration: query_duration,
+                 active_duration: 0,
+              }
+            : {
+                 submit: submit_context.submit,
+                 wait_duration: submit_context.wait_duration,
+                 active_duration: end_at - submit_context.submit,
+              }
+
+         return {
+            ...begin_context,
+            ...timings,
+            end: end_at,
+            duration: query_duration,
+            error: error,
+            data: data,
+         }
       }
 
       try {

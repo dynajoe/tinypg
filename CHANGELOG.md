@@ -1,3 +1,7 @@
+# 4.1.0
+
+Added a new `submit` event to indicate when the postgres query is submitted to the server. This will help consumers capture the actual duration of the  queries excluding the client pool wait time.
+
 # 4.0.0
 
 By default, sql files will **no longer be prepared statements**. To enable this feature set the option `use_prepared_statements` to `true`.

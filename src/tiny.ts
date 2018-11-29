@@ -18,6 +18,7 @@ export class TinyPg {
    public events: T.TinyPgEvents
    public pool: Pg.Pool
    public sql_db_calls: { [key: string]: DbCall }
+   public hook_collection: T.HookCollection
 
    private error_transformer: E.TinyPgErrorTransformer
    private sql_files: T.SqlFile[]
@@ -27,6 +28,14 @@ export class TinyPg {
       this.events = new EventEmitter()
       this.error_transformer = _.isFunction(options.error_transformer) ? options.error_transformer : _.identity
       this.options = options
+
+      this.hook_collection = {
+         preSql: _.isFunction(options.hooks.preSql) ? [options.hooks.preSql] : [],
+         preRawQuery: _.isFunction(options.hooks.preRawQuery) ? [options.hooks.preRawQuery] : [],
+         onQuery: _.isFunction(options.hooks.onQuery) ? [options.hooks.onQuery] : [],
+         onSubmit: _.isFunction(options.hooks.onSubmit) ? [options.hooks.onSubmit] : [],
+         onResult: _.isFunction(options.hooks.onResult) ? [options.hooks.onResult] : [],
+      }
 
       const params = Url.parse(options.connection_string, true)
       const [user, password] = _.isNil(params.auth) ? ['postgres', undefined] : params.auth.split(':', 2)
@@ -76,7 +85,10 @@ export class TinyPg {
    }
 
    async query<T extends object = any, P extends object = T.TinyPgParams>(raw_sql: string, params?: P): Promise<T.Result<T>> {
-      const [transformed_sql, transformed_params] = this.options.hooks.preSql(raw_sql, params)
+      const query_id = Uuid.v4()
+
+      // TODO: Handle caller_context for transactions calling this function
+      const preHooksResult = this.runPreRawQueryHooks(raw_sql, query_id, params, null)
 
       return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
          const parsed = P.parseSql(raw_sql)
@@ -84,16 +96,18 @@ export class TinyPg {
          const db_call = new DbCall({
             name: 'raw_query',
             key: null,
-            text: transformed_sql,
+            text: preHooksResult.raw_sql,
             parameterized_query: parsed.parameterized_sql,
             parameter_map: parsed.mapping,
             prepared: false,
          })
 
-         return await this.performDbCall<T>(db_call, transformed_params)
+         return await this.performDbCall<T>(db_call, preHooksResult.caller_context, preHooksResult.params, query_id)
       })
    }
 
+   // TODO make hooks a set with their own context
+   // Hooks can be merged transform wise but not context wise
    withHooks(hooks: T.TinyHooks): TinyPg {
       const new_tiny = Object.create(this) as TinyPg
       const original_tiny = this
@@ -102,7 +116,11 @@ export class TinyPg {
          return function() {
             const prior_hook_results = v.apply(original_tiny, ...arguments)
 
-            return (<any>hooks)[k].apply(new_tiny, ...prior_hook_results)
+            try {
+               return (<any>hooks)[k].apply(new_tiny, ...prior_hook_results)
+            } catch (error) {
+               log('withHooks', error)
+            }
          }
       })
 
@@ -110,18 +128,21 @@ export class TinyPg {
    }
 
    async sql<T extends object = any, P extends object = T.TinyPgParams>(name: string, params?: P): Promise<T.Result<T>> {
-      const [query_name, query_params] = this.options.hooks.preSql(name, params)
+      const query_id = Uuid.v4()
+
+      // TODO: Handle caller_context for transactions calling this function
+      const preSqlResult = this.runPreSqlHooks(name, query_id, params, null)
 
       return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
-         log('sql', query_name)
+         log('sql', preSqlResult.name)
 
-         const db_call: DbCall = this.sql_db_calls[query_name]
+         const db_call: DbCall = this.sql_db_calls[preSqlResult.name]
 
          if (_.isNil(db_call)) {
-            throw new Error(`Sql query with name [${query_name}] not found!`)
+            throw new Error(`Sql query with name [${preSqlResult.name}] not found!`)
          }
 
-         return this.performDbCall<T>(db_call, query_params)
+         return this.performDbCall<T>(db_call, preSqlResult.caller_context, preSqlResult.params, query_id)
       })
    }
 
@@ -220,8 +241,14 @@ export class TinyPg {
       return this.pool.connect()
    }
 
-   async performDbCall<T extends object = any, P extends object = T.TinyPgParams>(db_call: DbCall, params?: P): Promise<T.Result<T>> {
+   async performDbCall<T extends object = any, P extends object = T.TinyPgParams>(
+      db_call: DbCall,
+      caller_context: any,
+      params?: P,
+      query_id?: string
+   ): Promise<T.Result<T>> {
       log('performDbCall', db_call.config.name)
+      // pass in outside ctx from hoo
 
       let call_completed = false
       let client: Pg.PoolClient
@@ -229,11 +256,12 @@ export class TinyPg {
       const start_at = Date.now()
 
       const begin_context: T.QueryBeginContext = {
-         id: Uuid.v4(),
+         id: _.isNil(query_id) ? Uuid.v4() : query_id,
          sql: db_call.config.parameterized_query,
          start: start_at,
          name: db_call.config.name,
-         params,
+         params: params,
+         caller_context: caller_context,
       }
 
       let submit_context: T.QuerySubmitContext = null
@@ -259,6 +287,9 @@ export class TinyPg {
          let error: any = null
 
          try {
+            // Query hook
+            begin_context.caller_context = this.runQueryHooks(this.hook_collection.onQuery, begin_context)
+
             this.events.emit('query', begin_context)
 
             log('executing', db_call.config.name)
@@ -284,6 +315,10 @@ export class TinyPg {
             query.submit = (connection: any) => {
                const submitted_at = Date.now()
                submit_context = { ...begin_context, submit: submitted_at, wait_duration: submitted_at - begin_context.start }
+
+               // Submit hook
+               submit_context.caller_context = this.runQueryHooks(this.hook_collection.onSubmit, submit_context)
+
                this.events.emit('submit', submit_context)
                original_submit.call(query, connection)
             }
@@ -317,11 +352,13 @@ export class TinyPg {
                  submit: null,
                  wait_duration: query_duration,
                  active_duration: 0,
+                 caller_context: begin_context.caller_context,
               }
             : {
                  submit: submit_context.submit,
                  wait_duration: submit_context.wait_duration,
                  active_duration: end_at - submit_context.submit,
+                 caller_context: submit_context.caller_context,
               }
 
          return {
@@ -337,7 +374,11 @@ export class TinyPg {
       try {
          const data = await Promise.race([connection_failed_promise, query_promise()])
 
-         this.events.emit('result', createCompleteContext(null, data))
+         const complete_context = createCompleteContext(null, data)
+
+         complete_context.caller_context = this.runQueryHooks(this.hook_collection.onSubmit, complete_context)
+
+         this.events.emit('result', complete_context)
 
          return data
       } catch (e) {
@@ -350,6 +391,53 @@ export class TinyPg {
       } finally {
          call_completed = true
       }
+   }
+
+   // TODO decide how context is merged (if it all)
+   // Right now it us up to the hook creator to return the proper context
+   runPreSqlHooks(original_name: string, query_id: string, original_params: T.TinyPgParams, original_caller_context: any): T.PreSqlHookResult {
+      return _.reduce(
+         this.hook_collection.preSql,
+         ({ name, params, caller_context }, hook) => {
+            return hook(name, query_id, params, caller_context)
+         },
+         {
+            name: original_name,
+            params: original_params,
+            caller_context: original_caller_context,
+         }
+      )
+   }
+
+   runPreRawQueryHooks(
+      original_raw_sql: string,
+      query_id: string,
+      original_params: T.TinyPgParams,
+      original_caller_context: any
+   ): T.PreRawQueryHookResult {
+      return _.reduce(
+         this.hook_collection.preRawQuery,
+         ({ raw_sql, params, caller_context }, hook) => {
+            return hook(raw_sql, query_id, params, caller_context)
+         },
+         {
+            raw_sql: original_raw_sql,
+            params: original_params,
+            caller_context: original_caller_context,
+         }
+      )
+   }
+
+   // TODO: Does hook result context need to be merged?
+   // Right now last hook wins caller_context
+   runQueryHooks<T extends T.ContextCallable>(hooks: ((hook: T) => any)[], query_context: T): any {
+      return _.reduce(
+         hooks,
+         (_caller_context, hook) => {
+            return hook(query_context)
+         },
+         query_context.caller_context
+      )
    }
 }
 
@@ -393,6 +481,6 @@ export class FormattableDbCall {
    }
 
    query<T extends object = any>(params: T.TinyPgParams = {}): Promise<T.Result<T>> {
-      return this.db.performDbCall<T>(this.db_call, params)
+      return this.db.performDbCall<T>(this.db_call, null, params)
    }
 }

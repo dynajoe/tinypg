@@ -2,8 +2,27 @@ import { EventEmitter } from 'events'
 import { TinyPgErrorTransformer } from './errors'
 import { TlsOptions } from 'tls'
 
+export type HookCollection = { [P in keyof Required<TinyHooks>]: TinyHooks[P][] }
+
+export interface PreSqlHookResult {
+   name: string
+   params: TinyPgParams
+   caller_context: any
+}
+
+export interface PreRawQueryHookResult {
+   raw_sql: string
+   params: TinyPgParams
+   caller_context: any
+}
+
 export interface TinyHooks {
-   preSql: (name: string, params: any) => [string, any]
+   preSql?: (name: string, query_id: string, params?: TinyPgParams, context?: any) => PreSqlHookResult
+   preRawQuery?: (rawSql: string, query_id: string, params?: TinyPgParams, context?: any) => PreRawQueryHookResult
+   // TODO transaction
+   onQuery?: (query_begin_context: QueryBeginContext) => any
+   onSubmit?: (query_submit_context: QuerySubmitContext) => any
+   onResult?: (query_complete_context: QueryCompleteContext) => any
 }
 
 export interface TinyPgOptions {
@@ -35,7 +54,11 @@ export interface Result<T extends object> {
    row_count: number
 }
 
-export interface QueryBeginContext {
+export interface ContextCallable {
+   caller_context?: any
+}
+
+export interface QueryBeginContext extends ContextCallable {
    id: string
    sql: string
    start: number

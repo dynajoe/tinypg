@@ -4,10 +4,9 @@ import { TlsOptions } from 'tls'
 
 export type HookCollection = { [P in keyof Required<TinyHooks>]: TinyHooks[P][] }
 
-export interface PreSqlHookResult {
-   name: string
-   params: TinyPgParams
-   caller_context: any
+export interface HookResult<T> {
+   args: T
+   ctx: any
 }
 
 export interface PreRawQueryHookResult {
@@ -16,13 +15,27 @@ export interface PreRawQueryHookResult {
    caller_context: any
 }
 
+export type TransactionContext = { transaction_id: string }
+export type QueryContext = { query_id: string }
+
+export type TinyCallContext = TransactionContext | QueryContext
+
+export interface TinyHookLifecycle {
+   preSql?: (tiny_ctx: TinyCallContext, params: [string, TinyPgParams]) => HookResult<[string, TinyPgParams]>
+   preRawQuery?: (tiny_ctx: TinyCallContext, params: [string, TinyPgParams]) => HookResult<[string, TinyPgParams]>
+   // // TODO transaction
+   onQuery?: (query_begin_context: QueryBeginContext) => void
+   onSubmit?: (query_submit_context: QuerySubmitContext) => void
+   onResult?: (query_complete_context: QueryCompleteContext) => void
+}
+
 export interface TinyHooks {
-   preSql?: (name: string, query_id: string, params?: TinyPgParams, context?: any) => PreSqlHookResult
-   preRawQuery?: (rawSql: string, query_id: string, params?: TinyPgParams, context?: any) => PreRawQueryHookResult
-   // TODO transaction
-   onQuery?: (query_begin_context: QueryBeginContext) => any
-   onSubmit?: (query_submit_context: QuerySubmitContext) => any
-   onResult?: (query_complete_context: QueryCompleteContext) => any
+   preSql?: (tiny_ctx: TinyCallContext, name: string, params: TinyPgParams) => HookResult<[string, TinyPgParams]>
+   preRawQuery?: (tiny_ctx: TinyCallContext, name: string, params: TinyPgParams) => HookResult<[string, TinyPgParams]>
+   // // TODO transaction
+   onQuery?: (ctx: any, query_begin_context: QueryBeginContext) => any
+   onSubmit?: (ctx: any, query_submit_context: QuerySubmitContext) => any
+   onResult?: (ctx: any, query_complete_context: QueryCompleteContext) => any
 }
 
 export interface TinyPgOptions {
@@ -32,7 +45,7 @@ export interface TinyPgOptions {
    use_prepared_statements?: boolean
    error_transformer?: TinyPgErrorTransformer
    capture_stack_trace?: boolean
-   hooks: TinyHooks
+   hooks?: TinyHooks
    pool_options?: {
       max?: number
       min?: number
@@ -54,11 +67,7 @@ export interface Result<T extends object> {
    row_count: number
 }
 
-export interface ContextCallable {
-   caller_context?: any
-}
-
-export interface QueryBeginContext extends ContextCallable {
+export interface QueryBeginContext {
    id: string
    sql: string
    start: number

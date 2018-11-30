@@ -42,7 +42,7 @@ describe('Hooks', () => {
             })
 
             await my_tiny.sql('a.select')
-            console.log(final_context)
+
             expect(final_context.foo).to.equal('bar')
             expect(final_context.onQuery).to.exist
             expect(final_context.onSubmit).to.exist

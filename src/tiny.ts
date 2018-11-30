@@ -203,7 +203,7 @@ export class TinyPg {
                   }
 
                   const [name, params] = last_result.args
-                  const result = hook_set_with_ctx.hook_set.preSql(hook_set_with_ctx.ctx, name, params)
+                  const result = hook_set_with_ctx.hook_set.preSql(ctx, name, params)
                   hook_set_with_ctx.ctx = result.ctx
                   return result
                },
@@ -217,7 +217,7 @@ export class TinyPg {
                      return last_result
                   }
                   const [raw_query, params] = last_result.args
-                  const result = hook_set_with_ctx.hook_set.preRawQuery(hook_set_with_ctx.ctx, raw_query, params)
+                  const result = hook_set_with_ctx.hook_set.preRawQuery(ctx, raw_query, params)
                   hook_set_with_ctx.ctx = result.ctx
                   return result
                },

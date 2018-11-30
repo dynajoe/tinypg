@@ -334,9 +334,7 @@ export class TinyPg {
          let error: any = null
 
          try {
-            // Query hook
-            // begin_context.caller_context = this.runQueryHooks(this.hook_collection.onQuery, begin_context)
-
+            hooks.onQuery(begin_context)
             this.events.emit('query', begin_context)
 
             log('executing', db_call.config.name)
@@ -363,9 +361,7 @@ export class TinyPg {
                const submitted_at = Date.now()
                submit_context = { ...begin_context, submit: submitted_at, wait_duration: submitted_at - begin_context.start }
 
-               // Submit hook
                hooks.onSubmit(submit_context)
-
                this.events.emit('submit', submit_context)
                original_submit.call(query, connection)
             }

@@ -3,7 +3,10 @@ import { expect } from 'chai'
 import { TinyPg } from '../'
 import * as AsyncHooks from 'async_hooks'
 
-describe.only('Hooks', () => {
+// forces PromiseHooks to be enabled.
+AsyncHooks.createHook({ init() {} }).enable()
+
+describe('Hooks', () => {
    let tiny: TinyPg
 
    beforeEach(() => {
@@ -78,6 +81,7 @@ describe.only('Hooks', () => {
 
          await hooked_tiny.sql('a.select')
 
+         expect(caller_async_execution_id).to.not.equal(0)
          expect(final_context.preSql.async_id).to.equal(caller_async_execution_id)
       })
    })

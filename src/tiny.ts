@@ -303,7 +303,7 @@ export class TinyPg {
                }
 
                try {
-                  hook_set_with_ctx.transaction_ctx = hook_set_with_ctx.hook_set.preTransaction(hook_set_with_ctx.transaction_ctx, transaction_id)
+                  hook_set_with_ctx.transaction_ctx = hook_set_with_ctx.hook_set.preTransaction(transaction_id)
                } catch (error) {
                   log('preTransaction hook error', error)
                }

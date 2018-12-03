@@ -38,7 +38,7 @@ export interface TinyHooks {
    onQuery?: (ctx: any, query_begin_context: QueryBeginContext) => any
    onSubmit?: (ctx: any, query_submit_context: QuerySubmitContext) => any
    onResult?: (ctx: any, query_complete_context: QueryCompleteContext) => any
-   preTransaction?: (transaction_ctx: any, transaction_id: string) => void
+   preTransaction?: (transaction_id: string) => void
    onBegin?: (transaction_ctx: any, transaction_id: string) => void
    onCommit?: (transaction_ctx: any, transaction_id: string) => void
    onRollback?: (transaction_ctx: any, transaction_id: string, error: Error) => void

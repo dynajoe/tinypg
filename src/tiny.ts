@@ -23,12 +23,14 @@ export class TinyPg {
    private error_transformer: E.TinyPgErrorTransformer
    private sql_files: T.SqlFile[]
    private options: T.TinyPgOptions
+   private transaction_id: string
 
    constructor(options: T.TinyPgOptions) {
       this.events = new EventEmitter()
       this.error_transformer = _.isFunction(options.error_transformer) ? options.error_transformer : _.identity
       this.options = options
       this.hooks = _.isNil(this.options.hooks) ? [] : [this.options.hooks]
+      this.transaction_id = null
 
       const params = Url.parse(options.connection_string, true)
       const [user, password] = _.isNil(params.auth) ? ['postgres', undefined] : params.auth.split(':', 2)
@@ -79,8 +81,10 @@ export class TinyPg {
 
    query<T extends object = any, P extends object = T.TinyPgParams>(raw_sql: string, params?: P): Promise<T.Result<T>> {
       const query_id = Uuid.v4()
+
       const hook_lifecycle = this.makeHooksLifeCycle()
-      const [new_query, new_params] = hook_lifecycle.preRawQuery({ query_id: query_id }, [raw_sql, params]).args
+
+      const [new_query, new_params] = hook_lifecycle.preRawQuery({ query_id: query_id, transaction_id: this.transaction_id }, [raw_sql, params]).args
 
       return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
          const parsed = P.parseSql(raw_sql)
@@ -100,11 +104,10 @@ export class TinyPg {
 
    sql<T extends object = any, P extends object = T.TinyPgParams>(name: string, params?: P): Promise<T.Result<T>> {
       const query_id = Uuid.v4()
-      const hook_lifecycle = this.makeHooksLifeCycle()
-      const [new_name, new_params] = hook_lifecycle.preSql({ query_id: query_id }, [name, params]).args
 
-      // TODO: Handle caller_context for transactions calling this function
-      // const preSqlResult = this.runPreSqlHooks(name, query_id, params, null)
+      const hook_lifecycle = this.makeHooksLifeCycle()
+
+      const [new_name, new_params] = hook_lifecycle.preSql({ query_id: query_id, transaction_id: this.transaction_id }, [name, params]).args
 
       return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
          log('sql', new_name)
@@ -120,6 +123,12 @@ export class TinyPg {
    }
 
    transaction<T = any>(tx_fn: (db: TinyPg) => Promise<T>): Promise<T> {
+      const transaction_id = Uuid.v4()
+
+      const hook_lifecycle = this.makeHooksLifeCycle()
+
+      hook_lifecycle.preTransaction(transaction_id)
+
       return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
          log('transaction')
 
@@ -139,7 +148,11 @@ export class TinyPg {
 
             await tx_client.query('BEGIN')
 
+            hook_lifecycle.onBegin(transaction_id)
+
             const tiny_tx: TinyPg = Object.create(this)
+
+            tiny_tx.transaction_id = transaction_id
 
             const assertThennable = (tx_fn_result: any) => {
                if (_.isNil(tx_fn_result) || !_.isFunction(tx_fn_result.then)) {
@@ -165,10 +178,16 @@ export class TinyPg {
 
             await tx_client.query('COMMIT')
 
+            hook_lifecycle.onCommit(transaction_id)
+
             return result
          } catch (error) {
             log('ROLLBACK transaction')
+
             await tx_client.query('ROLLBACK')
+
+            hook_lifecycle.onRollback(transaction_id, error)
+
             throw error
          } finally {
             release()
@@ -185,19 +204,14 @@ export class TinyPg {
    }
 
    makeHooksLifeCycle(): Required<T.TinyHookLifecycle> {
-      interface Stuff {
-         ctx: any
-         hook_set: T.TinyHooks
-      }
-
-      const hooks_to_run: Stuff[] = this.hooks.map(hook_set => {
-         return { ctx: null, hook_set: hook_set }
+      const hooks_to_run: T.HookSetWithContext[] = this.hooks.map(hook_set => {
+         return { ctx: null, transaction_ctx: null, hook_set: hook_set }
       })
 
       return {
          preSql: (ctx: T.TinyCallContext, args) => {
             return hooks_to_run.reduce(
-               (last_result, hook_set_with_ctx: Stuff) => {
+               (last_result, hook_set_with_ctx) => {
                   if (_.isNil(hook_set_with_ctx.hook_set.preSql)) {
                      return last_result
                   }
@@ -221,7 +235,7 @@ export class TinyPg {
          },
          preRawQuery: (ctx: T.TinyCallContext, args) => {
             return hooks_to_run.reduce(
-               (last_result, hook_set_with_ctx: Stuff) => {
+               (last_result, hook_set_with_ctx) => {
                   if (_.isNil(hook_set_with_ctx.hook_set.preRawQuery)) {
                      return last_result
                   }
@@ -279,6 +293,62 @@ export class TinyPg {
                   hook_set_with_ctx.ctx = hook_set_with_ctx.hook_set.onResult(hook_set_with_ctx.ctx, query_complete_context)
                } catch (error) {
                   log('onResult hook error', error)
+               }
+            })
+         },
+         preTransaction: (transaction_id: string) => {
+            _.forEach(hooks_to_run, hook_set_with_ctx => {
+               if (_.isNil(hook_set_with_ctx.hook_set.preTransaction)) {
+                  return
+               }
+
+               try {
+                  hook_set_with_ctx.transaction_ctx = hook_set_with_ctx.hook_set.preTransaction(hook_set_with_ctx.transaction_ctx, transaction_id)
+               } catch (error) {
+                  log('preTransaction hook error', error)
+               }
+            })
+         },
+         onBegin: (transaction_id: string) => {
+            _.forEach(hooks_to_run, hook_set_with_ctx => {
+               if (_.isNil(hook_set_with_ctx.hook_set.onBegin)) {
+                  return
+               }
+
+               try {
+                  hook_set_with_ctx.transaction_ctx = hook_set_with_ctx.hook_set.onBegin(hook_set_with_ctx.transaction_ctx, transaction_id)
+               } catch (error) {
+                  log('onBegin hook error', error)
+               }
+            })
+         },
+         onCommit: (transaction_id: string) => {
+            _.forEach(hooks_to_run, hook_set_with_ctx => {
+               if (_.isNil(hook_set_with_ctx.hook_set.onCommit)) {
+                  return
+               }
+
+               try {
+                  hook_set_with_ctx.transaction_ctx = hook_set_with_ctx.hook_set.onCommit(hook_set_with_ctx.transaction_ctx, transaction_id)
+               } catch (error) {
+                  log('onCommit hook error', error)
+               }
+            })
+         },
+         onRollback: (transaction_id: string, transaction_error: Error) => {
+            _.forEach(hooks_to_run, hook_set_with_ctx => {
+               if (_.isNil(hook_set_with_ctx.hook_set.onRollback)) {
+                  return
+               }
+
+               try {
+                  hook_set_with_ctx.transaction_ctx = hook_set_with_ctx.hook_set.onRollback(
+                     hook_set_with_ctx.transaction_ctx,
+                     transaction_id,
+                     transaction_error
+                  )
+               } catch (error) {
+                  log('onRollback hook error', error)
                }
             })
          },

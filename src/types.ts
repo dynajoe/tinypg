@@ -15,27 +15,39 @@ export interface PreRawQueryHookResult {
    caller_context: any
 }
 
-export type TransactionContext = { transaction_id: string }
-export type QueryContext = { query_id: string }
-
-export type TinyCallContext = TransactionContext | QueryContext
+export interface TinyCallContext {
+   transaction_id: string
+   query_id: string
+}
 
 export interface TinyHookLifecycle {
    preSql?: (tiny_ctx: TinyCallContext, params: [string, TinyPgParams]) => HookResult<[string, TinyPgParams]>
    preRawQuery?: (tiny_ctx: TinyCallContext, params: [string, TinyPgParams]) => HookResult<[string, TinyPgParams]>
-   // // TODO transaction
    onQuery?: (query_begin_context: QueryBeginContext) => void
    onSubmit?: (query_submit_context: QuerySubmitContext) => void
    onResult?: (query_complete_context: QueryCompleteContext) => void
+   preTransaction?: (transaction_id: string) => void
+   onBegin?: (transaction_id: string) => void
+   onCommit?: (transaction_id: string) => void
+   onRollback?: (transaction_id: string, error: Error) => void
 }
 
 export interface TinyHooks {
    preSql?: (tiny_ctx: TinyCallContext, name: string, params: TinyPgParams) => HookResult<[string, TinyPgParams]>
    preRawQuery?: (tiny_ctx: TinyCallContext, name: string, params: TinyPgParams) => HookResult<[string, TinyPgParams]>
-   // // TODO transaction
    onQuery?: (ctx: any, query_begin_context: QueryBeginContext) => any
    onSubmit?: (ctx: any, query_submit_context: QuerySubmitContext) => any
    onResult?: (ctx: any, query_complete_context: QueryCompleteContext) => any
+   preTransaction?: (transaction_ctx: any, transaction_id: string) => void
+   onBegin?: (transaction_ctx: any, transaction_id: string) => void
+   onCommit?: (transaction_ctx: any, transaction_id: string) => void
+   onRollback?: (transaction_ctx: any, transaction_id: string, error: Error) => void
+}
+
+export interface HookSetWithContext {
+   ctx: any
+   transaction_ctx: any
+   hook_set: TinyHooks
 }
 
 export interface TinyPgOptions {

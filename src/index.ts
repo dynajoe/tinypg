@@ -2,7 +2,7 @@ import { TinyPg } from './tiny'
 
 export { TinyPg, FormattableDbCall } from './tiny'
 
-export { Result, TinyPgOptions, QueryBeginContext, QueryCompleteContext, SqlParseResult, SqlFile, TinyPgParams } from './types'
+export { Result, TinyPgOptions, QueryBeginContext, QueryCompleteContext, SqlParseResult, SqlFile, TinyPgParams, TinyCallContext } from './types'
 
 export { TinyPgError, TinyPgErrorTransformer } from './errors'
 

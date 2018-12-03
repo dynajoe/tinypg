@@ -202,10 +202,19 @@ export class TinyPg {
                      return last_result
                   }
 
-                  const [name, params] = last_result.args
-                  const result = hook_set_with_ctx.hook_set.preSql(ctx, name, params)
-                  hook_set_with_ctx.ctx = result.ctx
-                  return result
+                  try {
+                     const [name, params] = last_result.args
+
+                     const result = hook_set_with_ctx.hook_set.preSql(ctx, name, params)
+
+                     hook_set_with_ctx.ctx = result.ctx
+
+                     return result
+                  } catch (error) {
+                     log('preSql hook error', error)
+
+                     return last_result
+                  }
                },
                { args: args, ctx: ctx }
             )
@@ -216,10 +225,20 @@ export class TinyPg {
                   if (_.isNil(hook_set_with_ctx.hook_set.preRawQuery)) {
                      return last_result
                   }
-                  const [raw_query, params] = last_result.args
-                  const result = hook_set_with_ctx.hook_set.preRawQuery(ctx, raw_query, params)
-                  hook_set_with_ctx.ctx = result.ctx
-                  return result
+
+                  try {
+                     const [raw_query, params] = last_result.args
+
+                     const result = hook_set_with_ctx.hook_set.preRawQuery(ctx, raw_query, params)
+
+                     hook_set_with_ctx.ctx = result.ctx
+
+                     return result
+                  } catch (error) {
+                     log('preRawQuery hook error', error)
+
+                     return last_result
+                  }
                },
                { args: args, ctx: ctx }
             )
@@ -229,7 +248,12 @@ export class TinyPg {
                if (_.isNil(hook_set_with_ctx.hook_set.onSubmit)) {
                   return
                }
-               hook_set_with_ctx.ctx = hook_set_with_ctx.hook_set.onSubmit(hook_set_with_ctx.ctx, query_submit_context)
+
+               try {
+                  hook_set_with_ctx.ctx = hook_set_with_ctx.hook_set.onSubmit(hook_set_with_ctx.ctx, query_submit_context)
+               } catch (error) {
+                  log('onSubmit hook error', error)
+               }
             })
          },
          onQuery: (query_begin_context: T.QueryBeginContext) => {
@@ -237,7 +261,12 @@ export class TinyPg {
                if (_.isNil(hook_set_with_ctx.hook_set.onQuery)) {
                   return
                }
-               hook_set_with_ctx.ctx = hook_set_with_ctx.hook_set.onQuery(hook_set_with_ctx.ctx, query_begin_context)
+
+               try {
+                  hook_set_with_ctx.ctx = hook_set_with_ctx.hook_set.onQuery(hook_set_with_ctx.ctx, query_begin_context)
+               } catch (error) {
+                  log('onQuery hook error', error)
+               }
             })
          },
          onResult: (query_complete_context: T.QueryCompleteContext) => {
@@ -245,7 +274,12 @@ export class TinyPg {
                if (_.isNil(hook_set_with_ctx.hook_set.onResult)) {
                   return
                }
-               hook_set_with_ctx.ctx = hook_set_with_ctx.hook_set.onResult(hook_set_with_ctx.ctx, query_complete_context)
+
+               try {
+                  hook_set_with_ctx.ctx = hook_set_with_ctx.hook_set.onResult(hook_set_with_ctx.ctx, query_complete_context)
+               } catch (error) {
+                  log('onResult hook error', error)
+               }
             })
          },
       }

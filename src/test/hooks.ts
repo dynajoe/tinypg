@@ -93,6 +93,81 @@ describe('Hooks', () => {
                expect(unique_query_ids).to.have.length(2)
             })
          })
+
+         describe('and every hook throws an error', () => {
+            it('should catch the errors and return the original ctx', async () => {
+               let final_context: any
+               let original_context: any
+
+               const hooks: TinyHooks = {
+                  preSql: (ctx, _name, _params) => {
+                     original_context = ctx
+
+                     throw new Error('Error in preSql')
+                  },
+                  onQuery(_ctx, _query_begin_context) {
+                     throw new Error('Error in onQuery')
+                  },
+                  onSubmit(_ctx, _query_submit_context) {
+                     throw new Error('Error in onSubmit')
+                  },
+                  onResult(_ctx, _query_complete_context) {
+                     final_context = _ctx
+
+                     throw new Error('Error in onResult')
+                  },
+               }
+
+               const hooks_creation_methods = [H.newTiny({ hooks: hooks }), tiny.withHooks(hooks)]
+
+               for (const my_tiny of hooks_creation_methods) {
+                  final_context = null
+
+                  await my_tiny.sql('a.select')
+
+                  expect(final_context).to.deep.equal(original_context)
+               }
+            })
+         })
+
+         describe('and a single hook throws an error', () => {
+            it('should catch the error and continue with the rest of the hooks', async () => {
+               let final_context: any
+
+               const hooks: TinyHooks = {
+                  preSql: (ctx, name, params) => {
+                     return { ctx: { ...ctx, foo: 'bar' }, args: [name, params] }
+                  },
+                  onQuery(_ctx, _query_begin_context) {
+                     throw new Error('Error in onQuery')
+                  },
+                  onSubmit(ctx, _query_submit_context) {
+                     return {
+                        ...ctx,
+                        onSubmit: 'made it',
+                     }
+                  },
+                  onResult(ctx, query_complete_context) {
+                     final_context = {
+                        ...ctx,
+                        ...query_complete_context,
+                     }
+
+                     return final_context
+                  },
+               }
+
+               const hooks_creation_methods = [H.newTiny({ hooks: hooks }), tiny.withHooks(hooks)]
+
+               for (const my_tiny of hooks_creation_methods) {
+                  final_context = null
+
+                  await my_tiny.sql('a.select')
+
+                  expect(final_context.onSubmit).to.equal('made it')
+               }
+            })
+         })
       })
    })
 
@@ -167,6 +242,134 @@ describe('Hooks', () => {
                expect(unique_query_ids).to.have.length(2)
             })
          })
+
+         describe('and every hook throws an error', () => {
+            it('should catch the errors and return the original ctx', async () => {
+               let final_context: any
+               let original_context: any
+
+               const hooks: TinyHooks = {
+                  preRawQuery: (ctx, _name, _params) => {
+                     original_context = ctx
+
+                     throw new Error('Error in preRawQuery')
+                  },
+                  onQuery(_ctx, _query_begin_context) {
+                     throw new Error('Error in onQuery')
+                  },
+                  onSubmit(_ctx, _query_submit_context) {
+                     throw new Error('Error in onSubmit')
+                  },
+                  onResult(_ctx, _query_complete_context) {
+                     final_context = _ctx
+
+                     throw new Error('Error in onResult')
+                  },
+               }
+
+               const hooks_creation_methods = [H.newTiny({ hooks: hooks }), tiny.withHooks(hooks)]
+
+               for (const my_tiny of hooks_creation_methods) {
+                  final_context = null
+
+                  await my_tiny.query('SELECT * FROM __tiny_test_db.a')
+
+                  expect(final_context).to.deep.equal(original_context)
+               }
+            })
+         })
+
+         describe('and a single hook throws an error', () => {
+            it('should catch the error and continue with the rest of the hooks', async () => {
+               let final_context: any
+
+               const hooks: TinyHooks = {
+                  preRawQuery: (ctx, name, params) => {
+                     return { ctx: { ...ctx, foo: 'bar' }, args: [name, params] }
+                  },
+                  onQuery(_ctx, _query_begin_context) {
+                     throw new Error('Error in onQuery')
+                  },
+                  onSubmit(ctx, _query_submit_context) {
+                     return {
+                        ...ctx,
+                        onSubmit: 'made it',
+                     }
+                  },
+                  onResult(ctx, query_complete_context) {
+                     final_context = {
+                        ...ctx,
+                        ...query_complete_context,
+                     }
+
+                     return final_context
+                  },
+               }
+
+               const hooks_creation_methods = [H.newTiny({ hooks: hooks }), tiny.withHooks(hooks)]
+
+               for (const my_tiny of hooks_creation_methods) {
+                  final_context = null
+
+                  await my_tiny.query('SELECT * FROM __tiny_test_db.a')
+
+                  expect(final_context.onSubmit).to.equal('made it')
+               }
+            })
+         })
+      })
+   })
+
+   describe('transaction', () => {
+      it('should thread transaction context (withHooks and via options)', async () => {
+         let final_context: any
+         let tx_id: string
+
+         const hooks: TinyHooks = {
+            preTransaction: transaction_id => {
+               tx_id = transaction_id
+
+               return { preTransaction: transaction_id }
+            },
+            onBegin(ctx, transaction_id) {
+               return { ...ctx, onBegin: transaction_id }
+            },
+            onCommit(ctx, transaction_id) {
+               final_context = { ...ctx, onCommit: transaction_id }
+               return { ...ctx, onCommit: transaction_id }
+            },
+            onRollback(ctx, transaction_id, tx_error) {
+               final_context = { ...ctx, onRollback: transaction_id, tx_error: tx_error }
+               return final_context
+            },
+         }
+
+         const hooks_creation_methods = [H.newTiny({ hooks: hooks }), tiny.withHooks(hooks)]
+
+         for (const my_tiny of hooks_creation_methods) {
+            final_context = null
+
+            await my_tiny.transaction(async transaction_db => {
+               await transaction_db.query('SELECT * FROM __tiny_test_db.a')
+            })
+
+            expect(final_context.preTransaction).to.equal(tx_id)
+            expect(final_context.onBegin).to.equal(tx_id)
+            expect(final_context.onCommit).to.equal(tx_id)
+            expect(final_context.onRollback).to.not.exist
+
+            try {
+               await my_tiny.transaction(async transaction_db => {
+                  await transaction_db.query('SELECT * FROM bobby.tables')
+               })
+            } catch (error) {}
+
+            expect(final_context.preTransaction).to.equal(tx_id)
+            expect(final_context.onBegin).to.equal(tx_id)
+            expect(final_context.onCommit).to.not.exist
+            expect(final_context.onRollback).to.equal(tx_id)
+            expect(final_context.tx_error).to.exist
+         }
       })
    })
 

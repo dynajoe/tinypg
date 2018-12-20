@@ -227,6 +227,8 @@ export class TinyPg {
                   } catch (error) {
                      log('preSql hook error', error)
 
+                     hook_set_with_ctx.ctx = last_result.ctx
+
                      return last_result
                   }
                },
@@ -250,6 +252,8 @@ export class TinyPg {
                      return result
                   } catch (error) {
                      log('preRawQuery hook error', error)
+
+                     hook_set_with_ctx.ctx = last_result.ctx
 
                      return last_result
                   }

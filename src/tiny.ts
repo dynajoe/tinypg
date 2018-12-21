@@ -208,97 +208,69 @@ export class TinyPg {
          return { ctx: null, transaction_ctx: null, hook_set: hook_set }
       })
 
+      const preHook = (
+         fn_name: 'preSql' | 'preRawQuery',
+         ctx: T.TinyCallContext,
+         args: [string, T.TinyPgParams]
+      ): T.HookResult<[string, T.TinyPgParams]> => {
+         return hooks_to_run.reduce(
+            (last_result, hook_set_with_ctx) => {
+               if (_.isNil(hook_set_with_ctx.hook_set[fn_name])) {
+                  return last_result
+               }
+
+               try {
+                  const [name_or_query, params] = last_result.args
+
+                  const result = hook_set_with_ctx.hook_set[fn_name](ctx, name_or_query, params)
+
+                  hook_set_with_ctx.ctx = result.ctx
+
+                  return result
+               } catch (error) {
+                  log(`${fn_name} hook error`, error)
+
+                  hook_set_with_ctx.ctx = last_result.ctx
+
+                  return last_result
+               }
+            },
+            { args: args, ctx: ctx }
+         )
+      }
+
+      const dbCallHook = (
+         fn_name: 'onSubmit' | 'onQuery' | 'onResult',
+         query_context: T.QuerySubmitContext | T.QueryBeginContext | T.QueryCompleteContext
+      ): void => {
+         _.forEach(hooks_to_run, hook_set_with_ctx => {
+            if (_.isNil(hook_set_with_ctx.hook_set[<any>fn_name])) {
+               return
+            }
+
+            try {
+               hook_set_with_ctx.ctx = hook_set_with_ctx.hook_set[<any>fn_name](hook_set_with_ctx.ctx, query_context)
+            } catch (error) {
+               log(`${fn_name} hook error`, error)
+            }
+         })
+      }
+
       return {
          preSql: (ctx: T.TinyCallContext, args) => {
-            return hooks_to_run.reduce(
-               (last_result, hook_set_with_ctx) => {
-                  if (_.isNil(hook_set_with_ctx.hook_set.preSql)) {
-                     return last_result
-                  }
-
-                  try {
-                     const [name, params] = last_result.args
-
-                     const result = hook_set_with_ctx.hook_set.preSql(ctx, name, params)
-
-                     hook_set_with_ctx.ctx = result.ctx
-
-                     return result
-                  } catch (error) {
-                     log('preSql hook error', error)
-
-                     hook_set_with_ctx.ctx = last_result.ctx
-
-                     return last_result
-                  }
-               },
-               { args: args, ctx: ctx }
-            )
+            return preHook('preSql', ctx, args)
          },
          preRawQuery: (ctx: T.TinyCallContext, args) => {
-            return hooks_to_run.reduce(
-               (last_result, hook_set_with_ctx) => {
-                  if (_.isNil(hook_set_with_ctx.hook_set.preRawQuery)) {
-                     return last_result
-                  }
-
-                  try {
-                     const [raw_query, params] = last_result.args
-
-                     const result = hook_set_with_ctx.hook_set.preRawQuery(ctx, raw_query, params)
-
-                     hook_set_with_ctx.ctx = result.ctx
-
-                     return result
-                  } catch (error) {
-                     log('preRawQuery hook error', error)
-
-                     hook_set_with_ctx.ctx = last_result.ctx
-
-                     return last_result
-                  }
-               },
-               { args: args, ctx: ctx }
-            )
+            return preHook('preRawQuery', ctx, args)
          },
          onSubmit: (query_submit_context: T.QuerySubmitContext) => {
-            _.forEach(hooks_to_run, hook_set_with_ctx => {
-               if (_.isNil(hook_set_with_ctx.hook_set.onSubmit)) {
-                  return
-               }
-
-               try {
-                  hook_set_with_ctx.ctx = hook_set_with_ctx.hook_set.onSubmit(hook_set_with_ctx.ctx, query_submit_context)
-               } catch (error) {
-                  log('onSubmit hook error', error)
-               }
-            })
+            dbCallHook('onSubmit', query_submit_context)
          },
          onQuery: (query_begin_context: T.QueryBeginContext) => {
-            _.forEach(hooks_to_run, hook_set_with_ctx => {
-               if (_.isNil(hook_set_with_ctx.hook_set.onQuery)) {
-                  return
-               }
-
-               try {
-                  hook_set_with_ctx.ctx = hook_set_with_ctx.hook_set.onQuery(hook_set_with_ctx.ctx, query_begin_context)
-               } catch (error) {
-                  log('onQuery hook error', error)
-               }
-            })
+            dbCallHook('onQuery', query_begin_context)
          },
          onResult: (query_complete_context: T.QueryCompleteContext) => {
-            _.forEach(hooks_to_run, hook_set_with_ctx => {
-               if (_.isNil(hook_set_with_ctx.hook_set.onResult)) {
-                  return
-               }
-
-               try {
-                  hook_set_with_ctx.ctx = hook_set_with_ctx.hook_set.onResult(hook_set_with_ctx.ctx, query_complete_context)
-               } catch (error) {
-                  log('onResult hook error', error)
-               }
-            })
+            dbCallHook('onResult', query_complete_context)
          },
          preTransaction: (transaction_id: string) => {
             _.forEach(hooks_to_run, hook_set_with_ctx => {

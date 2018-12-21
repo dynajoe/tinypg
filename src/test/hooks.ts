@@ -11,14 +11,16 @@ AsyncHooks.createHook({ init() {} }).enable()
 describe('Hooks', () => {
    let tiny: TinyPg
 
-   beforeEach(() => {
+   beforeEach(async () => {
       tiny = H.newTiny()
 
-      return H.setUpDb().then(() => {
-         return ['a', 'b', 'c'].reduce((chain, v) => {
-            return chain.then<any>(() => H.insertA(v))
-         }, Promise.resolve())
-      })
+      await H.setUpDb()
+
+      const text = ['a', 'b', 'c']
+
+      for (const letter of text) {
+         await H.insertA(letter)
+      }
    })
 
    describe('preSql', () => {

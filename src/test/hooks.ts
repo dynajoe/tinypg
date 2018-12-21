@@ -371,6 +371,120 @@ describe('Hooks', () => {
             expect(final_context.tx_error).to.exist
          }
       })
+
+      describe('and every hook throws an error', () => {
+         it('should catch the errors', async () => {
+            let pre_tx_id: string
+            let commit_tx_id: string
+            let rollback_tx_id: string
+            let begin_tx_id: string
+
+            const hooks: TinyHooks = {
+               preTransaction: transaction_id => {
+                  pre_tx_id = transaction_id
+                  throw new Error('Error in preTransaction')
+               },
+               onBegin(_ctx, transaction_id) {
+                  begin_tx_id = transaction_id
+                  throw new Error('Error in onBegin')
+               },
+               onCommit(_ctx, transaction_id) {
+                  commit_tx_id = transaction_id
+                  throw new Error('Error in onCommit')
+               },
+               onRollback(_ctx, transaction_id) {
+                  rollback_tx_id = transaction_id
+                  throw new Error('Error in onRollback')
+               },
+            }
+
+            const resetIds = () => {
+               pre_tx_id = null
+               commit_tx_id = null
+               rollback_tx_id = null
+               begin_tx_id = null
+            }
+
+            const hooks_creation_methods = [H.newTiny({ hooks: hooks }), tiny.withHooks(hooks)]
+
+            for (const my_tiny of hooks_creation_methods) {
+               resetIds()
+
+               await my_tiny.transaction(async transaction_db => {
+                  await transaction_db.query('SELECT * FROM __tiny_test_db.a')
+               })
+
+               expect(begin_tx_id).to.equal(pre_tx_id)
+               expect(commit_tx_id).to.equal(pre_tx_id)
+               expect(rollback_tx_id).to.not.exist
+
+               resetIds()
+
+               try {
+                  await my_tiny.transaction(async transaction_db => {
+                     await transaction_db.query('SELECT * FROM bobby.tables')
+                  })
+               } catch (error) {}
+
+               expect(begin_tx_id).to.equal(pre_tx_id)
+               expect(commit_tx_id).to.not.exist
+               expect(rollback_tx_id).to.equal(pre_tx_id)
+            }
+         })
+      })
+
+      describe('and a single hook throws an error', () => {
+         it('should catch the error and continue with the rest of the hooks', async () => {
+            let final_context: any
+
+            const hooks: TinyHooks = {
+               preTransaction: transaction_id => {
+                  return { preTransaction: transaction_id }
+               },
+               onBegin(_ctx, _transaction_id) {
+                  throw new Error('Error in onBegin')
+               },
+               onCommit(ctx, transaction_id) {
+                  final_context = { ...ctx, onCommit: transaction_id }
+
+                  return final_context
+               },
+               onRollback(ctx, transaction_id) {
+                  final_context = { ...ctx, onRollback: transaction_id }
+
+                  return final_context
+               },
+            }
+
+            const reset = () => {
+               final_context = null
+            }
+
+            const hooks_creation_methods = [H.newTiny({ hooks: hooks }), tiny.withHooks(hooks)]
+
+            for (const my_tiny of hooks_creation_methods) {
+               reset()
+
+               await my_tiny.transaction(async transaction_db => {
+                  await transaction_db.query('SELECT * FROM __tiny_test_db.a')
+               })
+
+               expect(final_context.onCommit).to.equal(final_context.preTransaction)
+               expect(final_context.onRollback).to.not.exist
+
+               reset()
+
+               try {
+                  await my_tiny.transaction(async transaction_db => {
+                     await transaction_db.query('SELECT * FROM bobby.tables')
+                  })
+               } catch (error) {}
+
+               expect(final_context.onRollback).to.equal(final_context.preTransaction)
+               expect(final_context.onCommit).to.not.exist
+            }
+         })
+      })
    })
 
    describe('with async_hooks', () => {

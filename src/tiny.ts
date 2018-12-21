@@ -107,15 +107,15 @@ export class TinyPg {
 
       const hook_lifecycle = this.makeHooksLifeCycle()
 
-      const [new_name, new_params] = hook_lifecycle.preSql({ query_id: query_id, transaction_id: this.transaction_id }, [name, params]).args
+      const [, new_params] = hook_lifecycle.preSql({ query_id: query_id, transaction_id: this.transaction_id }, [name, params]).args
 
       return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
-         log('sql', new_name)
+         log('sql', name)
 
-         const db_call: DbCall = this.sql_db_calls[new_name]
+         const db_call: DbCall = this.sql_db_calls[name]
 
          if (_.isNil(db_call)) {
-            throw new Error(`Sql query with name [${new_name}] not found!`)
+            throw new Error(`Sql query with name [${name}] not found!`)
          }
 
          return this.performDbCall<T>(db_call, hook_lifecycle, new_params, query_id)

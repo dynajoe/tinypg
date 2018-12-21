@@ -169,6 +169,37 @@ describe('Hooks', () => {
             })
          })
       })
+
+      describe('name modification', () => {
+         it('should still run the original db_call', async () => {
+            let final_context: any
+
+            const hooks: TinyHooks = {
+               preSql: (ctx, name, params) => {
+                  return { ctx: { ...ctx, foo: 'bar' }, args: [`${name}_foo`, params] }
+               },
+               onResult(ctx, query_complete_context) {
+                  final_context = {
+                     ...ctx,
+                     ...query_complete_context,
+                  }
+
+                  return final_context
+               },
+            }
+
+            const hooks_creation_methods = [H.newTiny({ hooks: hooks }), tiny.withHooks(hooks)]
+
+            for (const my_tiny of hooks_creation_methods) {
+               final_context = null
+
+               await my_tiny.sql('a.select')
+
+               expect(final_context.query_id).to.exist
+               expect(final_context.foo).to.equal('bar')
+            }
+         })
+      })
    })
 
    describe('raw query', () => {

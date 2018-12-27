@@ -359,7 +359,6 @@ export class TinyPg {
       query_id?: string
    ): Promise<T.Result<T>> {
       log('performDbCall', db_call.config.name)
-      // pass in outside ctx from hoo
 
       let call_completed = false
       let client: Pg.PoolClient
@@ -538,9 +537,8 @@ export class FormattableDbCall {
    }
 
    query<T extends object = any>(params: T.TinyPgParams = {}): Promise<T.Result<T>> {
-      //const query_id = Uuid.v4()
       const hook_lifecycle = this.db.makeHooksLifeCycle()
-      // hook_lifecycle.preRawQuery({ query_id: query_id }, this.db_call.config.)
+
       return this.db.performDbCall<T>(this.db_call, hook_lifecycle, params)
    }
 }

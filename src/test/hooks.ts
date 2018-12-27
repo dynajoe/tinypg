@@ -96,16 +96,40 @@ describe('Hooks', () => {
             })
          })
 
-         describe('and every hook throws an error', () => {
+         describe('and a pre hook throws an error', () => {
+            it('should throw an error', async () => {
+               const hooks: TinyHooks = {
+                  preSql: (_ctx, _name, _params) => {
+                     throw new Error('Boom')
+                  },
+               }
+
+               const hooks_creation_methods = [H.newTiny({ hooks: hooks }), tiny.withHooks(hooks)]
+
+               for (const my_tiny of hooks_creation_methods) {
+                  try {
+                     await my_tiny.sql('a.select')
+                     expect.fail()
+                  } catch (error) {
+                     expect(error).to.be.instanceOf(Error)
+                  }
+               }
+            })
+         })
+
+         describe('and every non-pre hook throws an error', () => {
             it('should catch the errors and return the original ctx', async () => {
                let final_context: any
                let original_context: any
 
                const hooks: TinyHooks = {
-                  preSql: (ctx, _name, _params) => {
+                  preSql: (ctx, name, params) => {
                      original_context = ctx
 
-                     throw new Error('Error in preSql')
+                     return {
+                        ctx: ctx,
+                        args: [name, params],
+                     }
                   },
                   onQuery(_ctx, _query_begin_context) {
                      throw new Error('Error in onQuery')
@@ -132,7 +156,7 @@ describe('Hooks', () => {
             })
          })
 
-         describe('and a single hook throws an error', () => {
+         describe('and a single non-pre hook throws an error', () => {
             it('should catch the error and continue with the rest of the hooks', async () => {
                let final_context: any
 
@@ -276,16 +300,40 @@ describe('Hooks', () => {
             })
          })
 
-         describe('and every hook throws an error', () => {
+         describe('and a pre hook throws an error', () => {
+            it('should throw an error', async () => {
+               const hooks: TinyHooks = {
+                  preRawQuery: (_ctx, _name, _params) => {
+                     throw new Error('Boom')
+                  },
+               }
+
+               const hooks_creation_methods = [H.newTiny({ hooks: hooks }), tiny.withHooks(hooks)]
+
+               for (const my_tiny of hooks_creation_methods) {
+                  try {
+                     await my_tiny.query('SELECT * FROM __tiny_test_db.a')
+                     expect.fail()
+                  } catch (error) {
+                     expect(error).to.be.instanceOf(Error)
+                  }
+               }
+            })
+         })
+
+         describe('and every non-pre hook throws an error', () => {
             it('should catch the errors and return the original ctx', async () => {
                let final_context: any
                let original_context: any
 
                const hooks: TinyHooks = {
-                  preRawQuery: (ctx, _name, _params) => {
+                  preRawQuery: (ctx, name, params) => {
                      original_context = ctx
 
-                     throw new Error('Error in preRawQuery')
+                     return {
+                        ctx: ctx,
+                        args: [name, params],
+                     }
                   },
                   onQuery(_ctx, _query_begin_context) {
                      throw new Error('Error in onQuery')
@@ -312,7 +360,7 @@ describe('Hooks', () => {
             })
          })
 
-         describe('and a single hook throws an error', () => {
+         describe('and a non-pre single hook throws an error', () => {
             it('should catch the error and continue with the rest of the hooks', async () => {
                let final_context: any
 

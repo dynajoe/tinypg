@@ -221,21 +221,13 @@ export class TinyPg {
                   return last_result
                }
 
-               try {
-                  const [name_or_query, params] = last_result.args
+               const [name_or_query, params] = last_result.args
 
-                  const result = hook_fn(ctx, name_or_query, params)
+               const result = hook_fn(ctx, name_or_query, params)
 
-                  hook_set_with_ctx.ctx = result.ctx
+               hook_set_with_ctx.ctx = result.ctx
 
-                  return result
-               } catch (error) {
-                  log(`${fn_name} hook error`, error)
-
-                  hook_set_with_ctx.ctx = last_result.ctx
-
-                  return last_result
-               }
+               return result
             },
             { args: args, ctx: ctx }
          )

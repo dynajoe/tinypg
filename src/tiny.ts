@@ -215,14 +215,16 @@ export class TinyPg {
       ): T.HookResult<[string, T.TinyPgParams]> => {
          return hooks_to_run.reduce(
             (last_result, hook_set_with_ctx) => {
-               if (_.isNil(hook_set_with_ctx.hook_set[fn_name])) {
+               const hook_fn: any = hook_set_with_ctx.hook_set[fn_name]
+
+               if (_.isNil(hook_fn) || !_.isFunction(hook_fn)) {
                   return last_result
                }
 
                try {
                   const [name_or_query, params] = last_result.args
 
-                  const result = hook_set_with_ctx.hook_set[fn_name](ctx, name_or_query, params)
+                  const result = hook_fn(ctx, name_or_query, params)
 
                   hook_set_with_ctx.ctx = result.ctx
 
@@ -244,12 +246,37 @@ export class TinyPg {
          query_context: T.QuerySubmitContext | T.QueryBeginContext | T.QueryCompleteContext
       ): void => {
          _.forEach(hooks_to_run, hook_set_with_ctx => {
-            if (_.isNil(hook_set_with_ctx.hook_set[<any>fn_name])) {
+            const hook_fn: any = hook_set_with_ctx.hook_set[fn_name]
+
+            if (_.isNil(_.isNil(hook_fn) || !_.isFunction(hook_fn))) {
                return
             }
 
             try {
-               hook_set_with_ctx.ctx = hook_set_with_ctx.hook_set[<any>fn_name](hook_set_with_ctx.ctx, query_context)
+               hook_set_with_ctx.ctx = hook_fn(hook_set_with_ctx.ctx, <any>query_context)
+            } catch (error) {
+               log(`${fn_name} hook error`, error)
+            }
+         })
+      }
+
+      const transactionHook = (
+         fn_name: 'preTransaction' | 'onBegin' | 'onCommit' | 'onRollback',
+         transaction_id: string,
+         transaction_error?: Error
+      ) => {
+         _.forEach(hooks_to_run, hook_set_with_ctx => {
+            const hook_fn: any = hook_set_with_ctx.hook_set[fn_name]
+
+            if (_.isNil(hook_fn) || !_.isFunction(hook_fn)) {
+               return
+            }
+
+            try {
+               hook_set_with_ctx.transaction_ctx =
+                  fn_name === 'preTransaction'
+                     ? hook_fn(transaction_id)
+                     : hook_fn(hook_set_with_ctx.transaction_ctx, transaction_id, transaction_error)
             } catch (error) {
                log(`${fn_name} hook error`, error)
             }
@@ -273,60 +300,16 @@ export class TinyPg {
             dbCallHook('onResult', query_complete_context)
          },
          preTransaction: (transaction_id: string) => {
-            _.forEach(hooks_to_run, hook_set_with_ctx => {
-               if (_.isNil(hook_set_with_ctx.hook_set.preTransaction)) {
-                  return
-               }
-
-               try {
-                  hook_set_with_ctx.transaction_ctx = hook_set_with_ctx.hook_set.preTransaction(transaction_id)
-               } catch (error) {
-                  log('preTransaction hook error', error)
-               }
-            })
+            transactionHook('preTransaction', transaction_id)
          },
          onBegin: (transaction_id: string) => {
-            _.forEach(hooks_to_run, hook_set_with_ctx => {
-               if (_.isNil(hook_set_with_ctx.hook_set.onBegin)) {
-                  return
-               }
-
-               try {
-                  hook_set_with_ctx.transaction_ctx = hook_set_with_ctx.hook_set.onBegin(hook_set_with_ctx.transaction_ctx, transaction_id)
-               } catch (error) {
-                  log('onBegin hook error', error)
-               }
-            })
+            transactionHook('onBegin', transaction_id)
          },
          onCommit: (transaction_id: string) => {
-            _.forEach(hooks_to_run, hook_set_with_ctx => {
-               if (_.isNil(hook_set_with_ctx.hook_set.onCommit)) {
-                  return
-               }
-
-               try {
-                  hook_set_with_ctx.transaction_ctx = hook_set_with_ctx.hook_set.onCommit(hook_set_with_ctx.transaction_ctx, transaction_id)
-               } catch (error) {
-                  log('onCommit hook error', error)
-               }
-            })
+            transactionHook('onCommit', transaction_id)
          },
          onRollback: (transaction_id: string, transaction_error: Error) => {
-            _.forEach(hooks_to_run, hook_set_with_ctx => {
-               if (_.isNil(hook_set_with_ctx.hook_set.onRollback)) {
-                  return
-               }
-
-               try {
-                  hook_set_with_ctx.transaction_ctx = hook_set_with_ctx.hook_set.onRollback(
-                     hook_set_with_ctx.transaction_ctx,
-                     transaction_id,
-                     transaction_error
-                  )
-               } catch (error) {
-                  log('onRollback hook error', error)
-               }
-            })
+            transactionHook('onRollback', transaction_id, transaction_error)
          },
       }
    }

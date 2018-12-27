@@ -34,7 +34,7 @@ export interface TinyHookLifecycle {
 
 export interface TinyHooks {
    preSql?: (tiny_ctx: TinyCallContext, name: string, params: TinyPgParams) => HookResult<[string, TinyPgParams]>
-   preRawQuery?: (tiny_ctx: TinyCallContext, name: string, params: TinyPgParams) => HookResult<[string, TinyPgParams]>
+   preRawQuery?: (tiny_ctx: TinyCallContext, query: string, params: TinyPgParams) => HookResult<[string, TinyPgParams]>
    onQuery?: (ctx: any, query_begin_context: QueryBeginContext) => any
    onSubmit?: (ctx: any, query_submit_context: QuerySubmitContext) => any
    onResult?: (ctx: any, query_complete_context: QueryCompleteContext) => any

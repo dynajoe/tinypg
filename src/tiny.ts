@@ -474,24 +474,27 @@ export class TinyPg {
          }
       }
 
+      let complete_context: T.QueryCompleteContext
+
       try {
          const data = await Promise.race([connection_failed_promise, query_promise()])
 
-         const complete_context = createCompleteContext(null, data)
-
-         hooks.onResult(complete_context)
-
-         this.events.emit('result', complete_context)
+         complete_context = createCompleteContext(null, data)
 
          return data
       } catch (e) {
          const tiny_stack = `[${db_call.config.name}]\n\n${db_call.config.text}\n\n${e.stack}`
-         const tiny_error = new E.TinyPgError(`${e.message}`, tiny_stack, createCompleteContext(e, null))
 
-         this.events.emit('result', tiny_error.queryContext)
+         complete_context = createCompleteContext(e, null)
+
+         const tiny_error = new E.TinyPgError(`${e.message}`, tiny_stack, complete_context)
 
          throw this.error_transformer(tiny_error)
       } finally {
+         hooks.onResult(complete_context)
+
+         this.events.emit('result', complete_context)
+
          call_completed = true
       }
    }

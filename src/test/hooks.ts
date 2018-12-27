@@ -350,6 +350,30 @@ describe('Hooks', () => {
                }
             })
          })
+
+         describe('and there is an error in the query', () => {
+            it('should still call onResult with a complete context', async () => {
+               let final_context: any
+               const hooks: TinyHooks = {
+                  onResult(ctx, query_complete_context) {
+                     final_context = { ...ctx, onResult: query_complete_context }
+                     return final_context
+                  },
+               }
+
+               const hooks_creation_methods = [H.newTiny({ hooks: hooks }), tiny.withHooks(hooks)]
+
+               for (const my_tiny of hooks_creation_methods) {
+                  final_context = null
+
+                  try {
+                     await my_tiny.query('SELECT BOOM FROM POW')
+                  } catch {}
+
+                  expect(final_context.onResult.error).to.exist
+               }
+            })
+         })
       })
    })
 

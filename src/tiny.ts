@@ -240,7 +240,7 @@ export class TinyPg {
          _.forEach(hooks_to_run, hook_set_with_ctx => {
             const hook_fn: any = hook_set_with_ctx.hook_set[fn_name]
 
-            if (_.isNil(_.isNil(hook_fn) || !_.isFunction(hook_fn))) {
+            if (_.isNil(hook_fn) || !_.isFunction(hook_fn)) {
                return
             }
 

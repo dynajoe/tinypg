@@ -113,6 +113,125 @@ function ApiRequestHandler(request, reply) {
 
 In the above example *isolated_db* is the same instance of TinyPg except with an overridden events property and *dispose* method to remove all listeners. The *UserService* can create other services and pass its reference to *isolated_db* to other services. In doing so, you can track all database queries executed as the result of every API request.
 
+## Hooks
+Hooks enable user defined functions to be called before (or after depending on the hook) TinyPg functions are executed. Most hooks allow user defined context to be passed throughout the hook lifecycle. Different hooks defined in the same `TinyHooks` object maintain a shared context across each hook call. The following hooks are currently supported:
+* `preSql`
+    - Called at the start of `TinyPg.sql` before the db call is performed.
+    - `(tiny_ctx: TinyCallContext, name: string, params: TinyPgParams) => HookResult<[string, TinyPgParams]>`
+    - Context for the given `HookSet` is set to the `ctx` field of the object returned
+* `preRawQuery`
+    - Called at the start of `TinyPg.query` before the db call is performed.
+    - `(tiny_ctx: TinyCallContext, query: string, params: TinyPgParams) => HookResult<[string, TinyPgParams]>`
+    - Context for the given `HookSet` is set to the `ctx` field of the object returned
+* `onQuery`
+    - Called when the `Pg.PoolClient` is obtained (start of db call). The *query* event is also emitted at this point.
+    - `(ctx: any, query_begin_context: QueryBeginContext) => any`
+    - Context for the given `HookSet` is set to the return value
+* `onSubmit`
+    - Called when the query is [submitted]. The *submit* event is emitted at this point. See [Pg Query](https://node-postgres.com/api/client#-code-client-query-config-queryconfig-gt-promise-lt-result-gt-code-).
+    - `(ctx: any, query_submit_context: QuerySubmitContext) => any`
+    - Context for the given `HookSet` is set to the return value
+* `onResult`
+    - Called when the query promise is resolved or rejected. The *result* event is emitted at this point.
+    - `(ctx: any, query_complete_context: QueryCompleteContext) => any`
+    - Context for the given `HookSet` is set to the return value
+* `preTransaction`
+    - Called at the start of `TinyPg.transaction`.
+    - `(transaction_id: string) => any`
+    - Transaction context for the given `HookSet` is set to the return value
+* `onBegin`
+    - Called immediately after the `BEGIN` promise is resolved to begin the transaction.
+    - `(transaction_ctx: any, transaction_id: string) => any`
+    - Transaction context for the given `HookSet` is set to the return value
+* `onCommit`
+    - Called immediately after the `COMMIT` promise is resolved to commit the transaction.
+    - `(transaction_ctx: any, transaction_id: string) => any`
+    - Transaction context for the given `HookSet` is set to the return value
+* `onRollback`
+    - Called immediately after the `ROLLBACK` promise is resolved to abort the transaction.
+    - `(transaction_ctx: any, transaction_id: string, error: Error) => any`
+    - Transaction context for the given `HookSet` is set to the return value
+
+Note: a `HookResult` follows the form:
+```
+interface HookResult<T> {
+   args: T
+   ctx: any
+}
+```
+
+There is only one rule about using hooks: **HOOKS MUST BE SYNCHRONOUS**
+
+Hooks can be created via the `hooks` field on the `TinyPgOptions` passed to the constructor OR by calling `withHooks(hooks: TinyHooks)` on an instance of `TinyPg`. An example `TinyHooks` object can be found below. Notice how well hooks play with tracing tools such as [StackDriver trace](https://github.com/googleapis/cloud-trace-nodejs).
+```typescript
+{
+    preSql: (tiny_context, file_name, params) => {
+        const tracer = TraceAgent.get()
+
+        const span = tracer.createChildSpan({
+            name: `${file_name}_sql`,
+        })
+
+        _.forEach(buildSqlLabels(tiny_context, params), label => {
+            span.addLabel(label.label_key, label.label_value)
+        })
+
+        return {
+            ctx: {
+                sql_span: span,
+            },
+            args: [file_name, params],
+        }
+    },
+    onResult: (ctx: { sql_span: TraceAgent.PluginTypes.Span }, query_complete_context) => {
+        const tracer = TraceAgent.get()
+
+        if (tracer.isRealSpan(ctx.sql_span)) {
+            _.forEach(buildResultLabels(query_complete_context), label => {
+                ctx.sql_span.addLabel(label.label_key, label.label_value)
+            })
+
+            ctx.sql_span.endSpan()
+        }
+
+        return ctx
+    },
+    preTransaction: transaction_id => {
+        const tracer = TraceAgent.get()
+
+        const span = tracer.createChildSpan({
+            name: 'tinypg_transaction',
+        })
+
+        span.addLabel('transaction_id', transaction_id)
+
+        return {
+            transaction_span: span,
+        }
+    },
+    onCommit: (transaction_ctx: { transaction_span: TraceAgent.PluginTypes.Span }, _transaction_id) => {
+        const tracer = TraceAgent.get()
+
+        if (tracer.isRealSpan(transaction_ctx.transaction_span)) {
+            transaction_ctx.transaction_span.endSpan()
+        }
+
+        return transaction_ctx
+    },
+    onRollback: (transaction_ctx: { transaction_span: TraceAgent.PluginTypes.Span }, _transaction_id, error) => {
+        const tracer = TraceAgent.get()
+
+        if (tracer.isRealSpan(transaction_ctx.transaction_span)) {
+            transaction_ctx.transaction_span.addLabel('error', error)
+
+            transaction_ctx.transaction_span.endSpan()
+        }
+
+        return transaction_ctx
+    },
+}
+```
+
 ## VS Code Plugin Support
 
 If you're using TypeScript in your project (which I highly recommend) you can get an extra level of validation and editor integration by using the TinyPg VS Code plugin. This plugin can statically analyze (why I suggest using object literals) your code to ensure you've referenced sql files that exist and have provided all required parameters.
@@ -133,6 +252,7 @@ If you're using TypeScript in your project (which I highly recommend) you can ge
 - __capture_stack_trace: boolean__ - Opt-in to capturing stack trace to give a better indication of what function in your domain caused an error.
 - __tls_options__ - TLS options passed to the underlying socket.
 - __pool_options__: (See [node-pg-pool](https://github.com/brianc/node-pg-pool) - only difference is casing)
+- __hooks: TinyHooks__ - TinyHooks object see [Hooks](#hooks) for details about hooks.
 
 ### Example error_transformer
 
@@ -227,6 +347,24 @@ ORDER BY
 Starts a database transaction and ensures all queries executed against the provided TinyPg instance use the same client.
 
 - __tx_fn: (db: TinyPg) => Promise<T>__ - Provides db to perform transacted queries.
+
+## withHooks(hooks: T.TinyHooks): TinyPg
+
+Returns a new instance of TinyPg with the given `TinyHooks` added to the end of the instance's hook collection. See [Hooks](#hooks) for more details about each hook.
+
+```
+interface TinyHooks {
+   preSql?: (tiny_ctx: TinyCallContext, name: string, params: TinyPgParams) => HookResult<[string, TinyPgParams]>
+   preRawQuery?: (tiny_ctx: TinyCallContext, query: string, params: TinyPgParams) => HookResult<[string, TinyPgParams]>
+   onQuery?: (ctx: any, query_begin_context: QueryBeginContext) => any
+   onSubmit?: (ctx: any, query_submit_context: QuerySubmitContext) => any
+   onResult?: (ctx: any, query_complete_context: QueryCompleteContext) => any
+   preTransaction?: (transaction_id: string) => any
+   onBegin?: (transaction_ctx: any, transaction_id: string) => any
+   onCommit?: (transaction_ctx: any, transaction_id: string) => any
+   onRollback?: (transaction_ctx: any, transaction_id: string, error: Error) => any
+}
+```
 
 ## isolatedEmitter(): T.Disposable & TinyPg
 

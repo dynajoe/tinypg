@@ -6,6 +6,7 @@ import * as Util from './util'
 import { EventEmitter } from 'events'
 import * as Url from 'url'
 import * as E from './errors'
+import { parseSql } from 'tinypg-parser'
 
 const Uuid = require('node-uuid')
 const PgFormat = require('pg-format')
@@ -87,7 +88,7 @@ export class TinyPg {
       const [new_query, new_params] = hook_lifecycle.preRawQuery({ query_id: query_id, transaction_id: this.transaction_id }, [raw_sql, params]).args
 
       return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
-         const parsed = P.parseSql(raw_sql)
+         const parsed = parseSql(raw_sql)
 
          const db_call = new DbCall({
             name: 'raw_query',
@@ -519,7 +520,7 @@ export class FormattableDbCall {
 
    format(...args: any[]): FormattableDbCall {
       const formatted_sql = PgFormat(this.db_call.config.text, ...args)
-      const parsed = P.parseSql(formatted_sql)
+      const parsed = parseSql(formatted_sql)
 
       const new_db_call = new DbCall({
          ...this.db_call.config,

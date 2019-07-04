@@ -8,9 +8,10 @@
     "build-test": "npm run clean && tsc -p src/test",
     "build": "npm run clean && tsc",
     "clean": "rimraf './dist/' './src/**/*.js' './src/**/*.map'",
-    "prepare": "npm run build",
+    "prepare": "npm run snyk-protect; npm run build",
     "test": "npm run build-test && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --full-trace -t 15000 $MOCHA_FLAGS --require source-map-support/register --reporter spec",
-    "test-debugging": "npm run build-test && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --inspect-brk --no-timeouts --colors --full-trace $MOCHA_FLAGS --require source-map-support/register --reporter spec"
+    "test-debugging": "npm run build-test && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --inspect-brk --no-timeouts --colors --full-trace $MOCHA_FLAGS --require source-map-support/register --reporter spec",
+    "snyk-protect": "snyk protect"
   },
   "repository": {
     "type": "git",
@@ -41,7 +42,8 @@
     "lodash": "^4.17.11",
     "node-uuid": "1.4.7",
     "pg-format": "1.0.1",
-    "tinypg-parser": "^1.0.0"
+    "tinypg-parser": "^1.0.0",
+    "snyk": "^1.189.0"
   },
   "devDependencies": {
     "@types/chai": "3.4.34",
@@ -58,5 +60,6 @@
   },
   "peerDependencies": {
     "pg": "^7.4.1"
-  }
+  },
+  "snyk": true
 }

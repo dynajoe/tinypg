@@ -16,7 +16,7 @@ export interface PreRawQueryHookResult {
 }
 
 export interface TinyCallContext {
-   transaction_id: string
+   transaction_id?: string
    query_id: string
 }
 
@@ -92,7 +92,7 @@ export interface QuerySubmitContext extends QueryBeginContext {
    submit: number
 }
 
-export interface QueryCompleteContext extends QuerySubmitContext {
+export interface QueryCompleteContext extends Partial<QuerySubmitContext> {
    end: number
    duration: number
    active_duration: number
@@ -122,7 +122,7 @@ export interface SqlFile {
 
 export interface DbCallConfig {
    name: string
-   key: string | null
+   key: string
    parameter_map: ParamMapping[]
    parameterized_query: string
    text: string

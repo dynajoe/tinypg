@@ -7,6 +7,7 @@ import { EventEmitter } from 'events'
 import * as Url from 'url'
 import * as E from './errors'
 import { parseSql } from 'tinypg-parser'
+import { createHash } from 'crypto'
 
 const Uuid = require('node-uuid')
 const PgFormat = require('pg-format')
@@ -24,14 +25,13 @@ export class TinyPg {
    private error_transformer: E.TinyPgErrorTransformer
    private sql_files: T.SqlFile[]
    private options: T.TinyPgOptions
-   private transaction_id: string
+   private transaction_id?: string
 
    constructor(options: T.TinyPgOptions) {
       this.events = new EventEmitter()
       this.error_transformer = _.isFunction(options.error_transformer) ? options.error_transformer : _.identity
       this.options = options
       this.hooks = _.isNil(this.options.hooks) ? [] : [this.options.hooks]
-      this.transaction_id = null
 
       const params = Url.parse(options.connection_string, true)
       const [user, password] = _.isNil(params.auth) ? ['postgres', undefined] : params.auth.split(':', 2)
@@ -65,52 +65,53 @@ export class TinyPg {
 
       this.sql_files = P.parseFiles(_.compact(_.castArray(options.root_dir)))
 
-      this.sql_db_calls = _.keyBy(
-         _.map(this.sql_files, sql_file => {
-            return new DbCall({
-               name: sql_file.name,
-               key: sql_file.key,
-               text: sql_file.text,
-               parameterized_query: sql_file.parsed.parameterized_sql,
-               parameter_map: sql_file.parsed.mapping,
-               prepared: _.defaultTo(options.use_prepared_statements, false),
-            })
-         }),
-         x => x.config.key
-      )
+      const db_calls = _.map(this.sql_files, sql_file => {
+         return new DbCall({
+            name: sql_file.name,
+            key: sql_file.key,
+            text: sql_file.text,
+            parameterized_query: sql_file.parsed.parameterized_sql,
+            parameter_map: sql_file.parsed.mapping,
+            prepared: _.defaultTo(options.use_prepared_statements, false),
+         })
+      })
+
+      this.sql_db_calls = _.keyBy(db_calls, x => x.config.key!)
    }
 
-   query<T extends object = any, P extends object = T.TinyPgParams>(raw_sql: string, params?: P): Promise<T.Result<T>> {
+   query<T extends object = any, P extends T.TinyPgParams = undefined>(raw_sql: string, params?: P): Promise<T.Result<T>> {
       const query_id = Uuid.v4()
 
       const hook_lifecycle = this.makeHooksLifeCycle()
 
       const [new_query, new_params] = hook_lifecycle.preRawQuery({ query_id: query_id, transaction_id: this.transaction_id }, [raw_sql, params]).args
 
-      return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
+      return Util.stackTraceAccessor(this.options.capture_stack_trace!, async () => {
          const parsed = parseSql(raw_sql)
 
          const db_call = new DbCall({
             name: 'raw_query',
-            key: null,
+            key: createHash('md5')
+               .update(parsed.parameterized_sql)
+               .digest('hex'),
             text: new_query,
             parameterized_query: parsed.parameterized_sql,
             parameter_map: parsed.mapping,
             prepared: false,
          })
 
-         return await this.performDbCall<T>(db_call, hook_lifecycle, new_params, query_id)
+         return await this.performDbCall(db_call, hook_lifecycle, new_params, query_id)
       })
    }
 
-   sql<T extends object = any, P extends object = T.TinyPgParams>(name: string, params?: P): Promise<T.Result<T>> {
+   sql<T extends object = any, P extends T.TinyPgParams = undefined>(name: string, params?: P): Promise<T.Result<T>> {
       const query_id = Uuid.v4()
 
       const hook_lifecycle = this.makeHooksLifeCycle()
 
       const [, new_params] = hook_lifecycle.preSql({ query_id: query_id, transaction_id: this.transaction_id }, [name, params]).args
 
-      return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
+      return Util.stackTraceAccessor(this.options.capture_stack_trace!, async () => {
          log('sql', name)
 
          const db_call: DbCall = this.sql_db_calls[name]
@@ -119,7 +120,7 @@ export class TinyPg {
             throw new Error(`Sql query with name [${name}] not found!`)
          }
 
-         return this.performDbCall<T>(db_call, hook_lifecycle, new_params, query_id)
+         return this.performDbCall(db_call, hook_lifecycle, new_params, query_id)
       })
    }
 
@@ -130,7 +131,7 @@ export class TinyPg {
 
       hook_lifecycle.preTransaction(transaction_id)
 
-      return Util.stackTraceAccessor(this.options.capture_stack_trace, async () => {
+      return Util.stackTraceAccessor(this.options.capture_stack_trace!, async () => {
          log('transaction')
 
          const tx_client = await this.getClient()
@@ -345,9 +346,9 @@ export class TinyPg {
       return this.pool.connect()
    }
 
-   async performDbCall<T extends object = any, P extends object = T.TinyPgParams>(
+   async performDbCall<T extends object = any, P extends T.TinyPgParams = undefined>(
       db_call: DbCall,
-      hooks: T.TinyHookLifecycle,
+      hooks: Required<T.TinyHookLifecycle>,
       params?: P,
       query_id?: string
    ): Promise<T.Result<T>> {
@@ -366,7 +367,7 @@ export class TinyPg {
          params: params,
       }
 
-      let submit_context: T.QuerySubmitContext = null
+      let submit_context: T.QuerySubmitContext | null = null
 
       // Work around node-postgres swallowing queries after a connection error
       // https://github.com/brianc/node-postgres/issues/718
@@ -390,6 +391,7 @@ export class TinyPg {
 
          try {
             hooks.onQuery(begin_context)
+
             this.events.emit('query', begin_context)
 
             log('executing', db_call.config.name)
@@ -417,6 +419,7 @@ export class TinyPg {
                submit_context = { ...begin_context, submit: submitted_at, wait_duration: submitted_at - begin_context.start }
 
                hooks.onSubmit(submit_context)
+
                this.events.emit('submit', submit_context)
                original_submit.call(query, connection)
             }
@@ -441,13 +444,13 @@ export class TinyPg {
          }
       }
 
-      const createCompleteContext = (error: any, data: T.Result<T>): T.QueryCompleteContext => {
+      const createCompleteContext = (error: any, data: T.Result<T> | null): T.QueryCompleteContext => {
          const end_at = Date.now()
          const query_duration = end_at - start_at
 
-         const timings = _.isNil(submit_context)
+         const submit_timings = _.isNil(submit_context)
             ? {
-                 submit: null,
+                 submit: undefined,
                  wait_duration: query_duration,
                  active_duration: 0,
               }
@@ -459,7 +462,7 @@ export class TinyPg {
 
          return {
             ...begin_context,
-            ...timings,
+            ...submit_timings,
             end: end_at,
             duration: query_duration,
             error: error,
@@ -467,27 +470,27 @@ export class TinyPg {
          }
       }
 
-      let complete_context: T.QueryCompleteContext
+      const emitQueryComplete = (complete_context: T.QueryCompleteContext) => {
+         hooks.onResult(complete_context)
+         this.events.emit('result', complete_context)
+      }
 
       try {
          const data = await Promise.race([connection_failed_promise, query_promise()])
 
-         complete_context = createCompleteContext(null, data)
+         emitQueryComplete(createCompleteContext(null, data))
 
          return data
       } catch (e) {
          const tiny_stack = `[${db_call.config.name}]\n\n${db_call.config.text}\n\n${e.stack}`
+         const complete_context = createCompleteContext(e, null)
 
-         complete_context = createCompleteContext(e, null)
+         emitQueryComplete(complete_context)
 
          const tiny_error = new E.TinyPgError(`${e.message}`, tiny_stack, complete_context)
 
          throw this.error_transformer(tiny_error)
       } finally {
-         hooks.onResult(complete_context)
-
-         this.events.emit('result', complete_context)
-
          call_completed = true
       }
    }
@@ -532,9 +535,9 @@ export class FormattableDbCall {
       return new FormattableDbCall(new_db_call, this.db)
    }
 
-   query<T extends object = any>(params: T.TinyPgParams = {}): Promise<T.Result<T>> {
+   query<T extends object = any, P extends T.TinyPgParams = undefined>(params?: P): Promise<T.Result<T>> {
       const hook_lifecycle = this.db.makeHooksLifeCycle()
 
-      return this.db.performDbCall<T>(this.db_call, hook_lifecycle, params)
+      return this.db.performDbCall(this.db_call, hook_lifecycle, params)
    }
 }

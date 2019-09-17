@@ -19,7 +19,7 @@
         "noImplicitThis": true,
         "allowUnusedLabels": false,
         "strict": true,
-        "strictNullChecks": false,
+        "strictNullChecks": true,
         "outDir": "dist"
     },
     "compileOnSave": false,

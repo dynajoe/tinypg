@@ -79,7 +79,7 @@ export class TinyPg {
       this.sql_db_calls = _.keyBy(db_calls, x => x.config.key!)
    }
 
-   query<T extends object = any, P extends T.TinyPgParams = undefined>(raw_sql: string, params?: P): Promise<T.Result<T>> {
+   query<T extends object = any, P extends T.TinyPgParams = T.TinyPgParams>(raw_sql: string, params?: P): Promise<T.Result<T>> {
       const query_id = Uuid.v4()
 
       const hook_lifecycle = this.makeHooksLifeCycle()
@@ -104,7 +104,7 @@ export class TinyPg {
       })
    }
 
-   sql<T extends object = any, P extends T.TinyPgParams = undefined>(name: string, params?: P): Promise<T.Result<T>> {
+   sql<T extends object = any, P extends T.TinyPgParams = T.TinyPgParams>(name: string, params?: P): Promise<T.Result<T>> {
       const query_id = Uuid.v4()
 
       const hook_lifecycle = this.makeHooksLifeCycle()
@@ -346,7 +346,7 @@ export class TinyPg {
       return this.pool.connect()
    }
 
-   async performDbCall<T extends object = any, P extends T.TinyPgParams = undefined>(
+   async performDbCall<T extends object = any, P extends T.TinyPgParams = T.TinyPgParams>(
       db_call: DbCall,
       hooks: Required<T.TinyHookLifecycle>,
       params?: P,
@@ -535,7 +535,7 @@ export class FormattableDbCall {
       return new FormattableDbCall(new_db_call, this.db)
    }
 
-   query<T extends object = any, P extends T.TinyPgParams = undefined>(params?: P): Promise<T.Result<T>> {
+   query<T extends object = any, P extends T.TinyPgParams = T.TinyPgParams>(params?: P): Promise<T.Result<T>> {
       const hook_lifecycle = this.db.makeHooksLifeCycle()
 
       return this.db.performDbCall(this.db_call, hook_lifecycle, params)

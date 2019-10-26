@@ -142,10 +142,3 @@ export interface TinyPgEvents extends EventEmitter {
 
    emit(event: 'query' | 'submit' | 'result', ...args: any[]): boolean
 }
-
-declare module 'pg' {
-   export interface PoolConfig {
-      log?: any
-      statement_timeout?: number
-   }
-}

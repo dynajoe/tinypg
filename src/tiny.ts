@@ -40,7 +40,7 @@ export class TinyPg {
       const database = _.isNil(params.pathname) ? 'localhost' : params.pathname.split('/')[1]
       const enable_ssl = _.get(params.query, 'sslmode') !== 'disable'
 
-      const pool_config: Pg.PoolConfig = {
+      const pool_config: Pg.PoolConfig & { log: any } = {
          user: user,
          password: password,
          host: params.hostname,

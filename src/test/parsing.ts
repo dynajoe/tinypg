@@ -17,7 +17,7 @@ describe('parseFiles', () => {
       expect(parse_file_marker.relative_path).to.equal('a/parse_file_test_marker.sql')
    })
 
-   it('shoul correctly format root level file names', () => {
+   it('should correctly format root level file names', () => {
       const root_level_file = _.find(result, x => x.key.indexOf('root_level_sql_file') != -1)
       expect(root_level_file.name).to.equal('root_level_sql_file')
       expect(root_level_file.relative_path).to.equal('root_level_sql_file.sql')

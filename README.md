@@ -1,3 +1,6 @@
+[![GitHub tag](https://img.shields.io/github/tag/joeandaverde/tinypg.svg?style=flat)](https://github.com/joeandaverde/tinypg/releases)
+[![Actions Status](https://github.com/joeandaverde/tinypg/workflows/Test/badge.svg)](https://github.com/joeandaverde/tinypg/actions)
+
 # Introduction
 
 TinyPg makes it possible to use objects as the source for parameters in a query. For example:

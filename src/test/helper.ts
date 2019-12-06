@@ -1,7 +1,7 @@
 import { TinyPg, TinyPgOptions } from '../'
 import * as Pg from 'pg'
 
-export const connection_string = 'postgres://postgres@localhost:5432/?sslmode=disable'
+export const connection_string = 'postgres://postgres@localhost:5432/tinypg_test?sslmode=disable'
 
 export async function dbQuery(query: string, args: any[] = null): Promise<Pg.QueryResult> {
    const client = new Pg.Client(connection_string)

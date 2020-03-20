@@ -50,7 +50,7 @@
     "@types/node": "^8.10.59",
     "@types/pg": "^7.14.3",
     "chai": "^3.4.1",
-    "mocha": "^6.2.2",
+    "mocha": "^7.1.1",
     "pg": "^7.18.2",
     "rimraf": "^3.0.2",
     "source-map-support": "0.5.13",

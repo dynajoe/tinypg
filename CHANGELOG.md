@@ -1,3 +1,11 @@
+# 5.1.0
+
+Update dev dependencies. Use new when constructing node pg Query type internally because of deprecation warning.
+
+# 5.0.0
+
+Update to TypeScript 3.6.3. Public API's changed due to new typescript features for parameterized type defaults.
+
 # 4.1.0
 
 Added a new `submit` event to indicate when the postgres query is submitted to the server. This will help consumers capture the actual duration of the  queries excluding the client pool wait time.

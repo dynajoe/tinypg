@@ -1,8 +1,8 @@
-# 5.1.0
+# 5.1.0 - 2020-03-22
 
 Update dev dependencies. Use new when constructing node pg Query type internally because of deprecation warning.
 
-# 5.0.0
+# 5.0.0 - 2019-09-17
 
 Update to TypeScript 3.6.3. Public API's changed due to new typescript features for parameterized type defaults.
 

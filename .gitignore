@@ -6,3 +6,5 @@ npm-debug.log
 *.d.ts
 src/**/*.js
 src/**/*.map
+examples/**/*.js
+examples/**/*.js.map

@@ -1,0 +1,8 @@
+version: '2.0'
+services:
+  postgres:
+    image: postgres:11
+    environment:
+      POSTGRES_PASSWORD: tinypg
+    ports:
+    - "54999:5432"

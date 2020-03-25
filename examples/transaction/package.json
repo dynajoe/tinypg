@@ -1,0 +1,22 @@
+{
+  "name": "tinypg-example",
+  "version": "1.0.0",
+  "description": "Example project for TinyPg",
+  "scripts": {
+    "clean": "rimraf './src/**/*.js' './src/**/*.js.map'",
+    "build": "npm run clean && tsc",
+    "start": "npm run build && node src/index.js"
+  },
+  "author": "Joe Andaverde",
+  "license": "MIT",
+  "dependencies": {
+    "tinypg": "^5.1.0",
+    "pg": "^7.18.2"
+  },
+  "devDependencies": {
+    "@types/node": "12.12.31",
+    "@types/pg": "^7.14.3",
+    "rimraf": "3.0.2",
+    "typescript": "^3.8.3"
+  }
+}

@@ -40,13 +40,14 @@ export class TinyPg {
       const default_host = _.isNil(process.env.PGHOST) ? 'localhost' : process.env.PGHOST
       const default_database = _.isNil(process.env.PGDATABASE) ? 'postgres' : process.env.PGDATABASE
       const default_port = _.isNil(process.env.PGPORT) ? 5432 : _.toInteger(process.env.PGPORT)
+      const default_ssl = _.isNil(process.env.PGSSLMODE) ? 'disable' : process.env.PGSSLMODE
 
       const params = Url.parse(_.isNil(options.connection_string) ? '' : options.connection_string, true)
       const [user, password] = _.isNil(params.auth) ? [default_user, default_password] : params.auth.split(':', 2)
       const pool_options = _.isNil(options.pool_options) ? {} : options.pool_options
       const port = _.isNil(params.port) ? default_port : _.toInteger(params.port)
       const database = _.isNil(params.pathname) ? default_database : params.pathname.split('/')[1]
-      const enable_ssl = _.get(params.query, 'sslmode') !== 'disable'
+      const enable_ssl = !_.includes(['disable', 'allow'], _.get(params.query, 'sslmode', default_ssl))
       const host = _.isNil(params.hostname) ? default_host : params.hostname
 
       const pool_config: Pg.PoolConfig & { log: any } = {
@@ -55,7 +56,7 @@ export class TinyPg {
          host: host,
          port: port,
          database: database,
-         ssl: enable_ssl ? _.defaultTo(options.tls_options, false) : false,
+         ssl: enable_ssl ? _.defaultTo(options.tls_options, true) : false,
          keepAlive: pool_options.keep_alive,
          connectionTimeoutMillis: pool_options.connection_timeout_ms,
          idleTimeoutMillis: pool_options.idle_timeout_ms,

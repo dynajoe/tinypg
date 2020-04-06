@@ -28,25 +28,34 @@ export class TinyPg {
    private transaction_id?: string
 
    constructor(options: T.TinyPgOptions) {
+      options = _.isNil(options) ? {} : options
+
       this.events = new EventEmitter()
       this.error_transformer = _.isFunction(options.error_transformer) ? options.error_transformer : _.identity
       this.options = options
       this.hooks = _.isNil(this.options.hooks) ? [] : [this.options.hooks]
 
-      const params = Url.parse(options.connection_string, true)
-      const [user, password] = _.isNil(params.auth) ? ['postgres', undefined] : params.auth.split(':', 2)
+      const default_user = _.isNil(process.env.PGUSER) ? 'postgres' : process.env.PGUSER
+      const default_password = _.isNil(process.env.PGPASSWORD) ? undefined : process.env.PGPASSWORD
+      const default_host = _.isNil(process.env.PGHOST) ? 'localhost' : process.env.PGHOST
+      const default_database = _.isNil(process.env.PGDATABASE) ? 'postgres' : process.env.PGDATABASE
+      const default_port = _.isNil(process.env.PGPORT) ? 5432 : _.toInteger(process.env.PGPORT)
+
+      const params = Url.parse(_.isNil(options.connection_string) ? '' : options.connection_string, true)
+      const [user, password] = _.isNil(params.auth) ? [default_user, default_password] : params.auth.split(':', 2)
       const pool_options = _.isNil(options.pool_options) ? {} : options.pool_options
-      const port = _.isNil(params.port) ? 5432 : _.toInteger(params.port)
-      const database = _.isNil(params.pathname) ? 'localhost' : params.pathname.split('/')[1]
+      const port = _.isNil(params.port) ? default_port : _.toInteger(params.port)
+      const database = _.isNil(params.pathname) ? default_database : params.pathname.split('/')[1]
       const enable_ssl = _.get(params.query, 'sslmode') !== 'disable'
+      const host = _.isNil(params.hostname) ? default_host : params.hostname
 
       const pool_config: Pg.PoolConfig & { log: any } = {
          user: user,
          password: password,
-         host: params.hostname,
+         host: host,
          port: port,
          database: database,
-         ssl: enable_ssl ? _.defaultTo(options.tls_options, true) : false,
+         ssl: enable_ssl ? _.defaultTo(options.tls_options, false) : false,
          keepAlive: pool_options.keep_alive,
          connectionTimeoutMillis: pool_options.connection_timeout_ms,
          idleTimeoutMillis: pool_options.idle_timeout_ms,
@@ -91,9 +100,7 @@ export class TinyPg {
 
          const db_call = new DbCall({
             name: 'raw_query',
-            key: createHash('md5')
-               .update(parsed.parameterized_sql)
-               .digest('hex'),
+            key: createHash('md5').update(parsed.parameterized_sql).digest('hex'),
             text: new_query,
             parameterized_query: parsed.parameterized_sql,
             parameter_map: parsed.mapping,
@@ -406,12 +413,11 @@ export class TinyPg {
 
             const query = db_call.config.prepared
                ? new Pg.Query({
-                  name: db_call.prepared_name,
-                  text: db_call.config.parameterized_query,
-                  values: values,
-               })
+                    name: db_call.prepared_name,
+                    text: db_call.config.parameterized_query,
+                    values: values,
+                 })
                : new Pg.Query(db_call.config.parameterized_query, values)
-
 
             const original_submit = query.submit
 
@@ -427,7 +433,7 @@ export class TinyPg {
 
             const result = await new Promise<Pg.QueryResult>((resolve, reject) => {
                // The type definition does not know .callback is a function.
-               (<any>query).callback = (err: any, res: any) => (err ? reject(err) : resolve(res))
+               ;(<any>query).callback = (err: any, res: any) => (err ? reject(err) : resolve(res))
                client.query(query)
             })
 
@@ -506,9 +512,7 @@ export class DbCall {
       this.config = config
 
       if (this.config.prepared) {
-         const hash_code = Util.hashCode(config.parameterized_query)
-            .toString()
-            .replace('-', 'n')
+         const hash_code = Util.hashCode(config.parameterized_query).toString().replace('-', 'n')
          this.prepared_name = `${config.name}_${hash_code}`.substring(0, 63)
       }
    }

@@ -8,6 +8,7 @@ import * as Url from 'url'
 import * as E from './errors'
 import { parseSql } from 'tinypg-parser'
 import { createHash } from 'crypto'
+import { TlsOptions } from 'tls'
 
 const Uuid = require('node-uuid')
 const PgFormat = require('pg-format')
@@ -15,6 +16,32 @@ const PgFormat = require('pg-format')
 const Debug = require('debug')
 
 const log = Debug('tinypg')
+
+const parseConnectionConfigFromUrlOrDefault = (connection_string?: string, tls_options?: TlsOptions): Pg.PoolConfig => {
+   const default_user = _.isNil(process.env.PGUSER) ? 'postgres' : process.env.PGUSER
+   const default_password = _.isNil(process.env.PGPASSWORD) ? undefined : process.env.PGPASSWORD
+   const default_host = _.isNil(process.env.PGHOST) ? 'localhost' : process.env.PGHOST
+   const default_database = _.isNil(process.env.PGDATABASE) ? 'postgres' : process.env.PGDATABASE
+   const default_port = _.isNil(process.env.PGPORT) ? 5432 : _.toInteger(process.env.PGPORT)
+   const default_ssl = _.isNil(process.env.PGSSLMODE) ? 'disable' : process.env.PGSSLMODE
+
+   const params = Url.parse(_.isNil(connection_string) ? '' : connection_string, true)
+   const [user, password] = _.isNil(params.auth) ? [default_user, default_password] : params.auth.split(':', 2)
+
+   const port = _.toInteger(_.defaultTo(params.port, default_port))
+   const database = _.isNil(params.pathname) ? default_database : params.pathname.split('/')[1]
+   const enable_ssl = !_.includes(['disable', 'allow'], _.get(params.query, 'sslmode', default_ssl))
+   const host = _.defaultTo(params.hostname, default_host)
+
+   return {
+      user: user,
+      password: password,
+      host: host,
+      port: port,
+      database: database,
+      ssl: enable_ssl ? _.defaultTo(tls_options, true) : false,
+   }
+}
 
 export class TinyPg {
    public events: T.TinyPgEvents
@@ -35,28 +62,12 @@ export class TinyPg {
       this.options = options
       this.hooks = _.isNil(this.options.hooks) ? [] : [this.options.hooks]
 
-      const default_user = _.isNil(process.env.PGUSER) ? 'postgres' : process.env.PGUSER
-      const default_password = _.isNil(process.env.PGPASSWORD) ? undefined : process.env.PGPASSWORD
-      const default_host = _.isNil(process.env.PGHOST) ? 'localhost' : process.env.PGHOST
-      const default_database = _.isNil(process.env.PGDATABASE) ? 'postgres' : process.env.PGDATABASE
-      const default_port = _.isNil(process.env.PGPORT) ? 5432 : _.toInteger(process.env.PGPORT)
-      const default_ssl = _.isNil(process.env.PGSSLMODE) ? 'disable' : process.env.PGSSLMODE
-
-      const params = Url.parse(_.isNil(options.connection_string) ? '' : options.connection_string, true)
-      const [user, password] = _.isNil(params.auth) ? [default_user, default_password] : params.auth.split(':', 2)
       const pool_options = _.isNil(options.pool_options) ? {} : options.pool_options
-      const port = _.isNil(params.port) ? default_port : _.toInteger(params.port)
-      const database = _.isNil(params.pathname) ? default_database : params.pathname.split('/')[1]
-      const enable_ssl = !_.includes(['disable', 'allow'], _.get(params.query, 'sslmode', default_ssl))
-      const host = _.isNil(params.hostname) ? default_host : params.hostname
+
+      const config_from_url = parseConnectionConfigFromUrlOrDefault(options.connection_string, options.tls_options)
 
       const pool_config: Pg.PoolConfig & { log: any } = {
-         user: user,
-         password: password,
-         host: host,
-         port: port,
-         database: database,
-         ssl: enable_ssl ? _.defaultTo(options.tls_options, true) : false,
+         ...config_from_url,
          keepAlive: pool_options.keep_alive,
          connectionTimeoutMillis: pool_options.connection_timeout_ms,
          idleTimeoutMillis: pool_options.idle_timeout_ms,

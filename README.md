@@ -12,9 +12,13 @@ import { TinyPg } from 'tinypg'
 // Options default to PG environment variables
 const db = new TinyPg()
 
-const result = await db.query(`SELECT 'Hello, World'`)
+async function main() {
+   const result = await db.query(`SELECT 'Hello, World'`)
 
-console.log(result)
+   console.log(result)
+}
+
+main()
 // Prints:
 // { row_count: 1,
 //  rows: [ { '?column?': 'Hello, World' } ],

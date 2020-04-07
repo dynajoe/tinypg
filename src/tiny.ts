@@ -423,7 +423,7 @@ export class TinyPg {
                return _.get(params, m.name)
             })
 
-            const query = db_call.config.prepared
+            const query: T.TinyQuery = db_call.config.prepared
                ? new Pg.Query({
                     name: db_call.prepared_name,
                     text: db_call.config.parameterized_query,
@@ -444,8 +444,7 @@ export class TinyPg {
             }
 
             const result = await new Promise<Pg.QueryResult>((resolve, reject) => {
-               // The type definition does not know .callback is a function.
-               ;(<any>query).callback = (err: any, res: any) => (err ? reject(err) : resolve(res))
+               query.callback = (err: any, res: any) => (err ? reject(err) : resolve(res))
                client.query(query)
             })
 

@@ -17,15 +17,19 @@ const Debug = require('debug')
 
 const log = Debug('tinypg')
 
-const parseConnectionConfigFromUrlOrDefault = (connection_string?: string, tls_options?: TlsOptions): Pg.PoolConfig => {
-   const default_user = _.isNil(process.env.PGUSER) ? 'postgres' : process.env.PGUSER
-   const default_password = _.isNil(process.env.PGPASSWORD) ? undefined : process.env.PGPASSWORD
-   const default_host = _.isNil(process.env.PGHOST) ? 'localhost' : process.env.PGHOST
-   const default_database = _.isNil(process.env.PGDATABASE) ? 'postgres' : process.env.PGDATABASE
-   const default_port = _.isNil(process.env.PGPORT) ? 5432 : _.toInteger(process.env.PGPORT)
-   const default_ssl = _.isNil(process.env.PGSSLMODE) ? 'disable' : process.env.PGSSLMODE
+interface TinyQuery extends Pg.Query {
+   callback?(err: Error, result: any): void
+}
 
-   const params = Url.parse(_.isNil(connection_string) ? '' : connection_string, true)
+const parseConnectionConfigFromUrlOrDefault = (connection_string?: string, tls_options?: TlsOptions): Pg.PoolConfig => {
+   const default_user = _.defaultTo(process.env.PGUSER, 'postgres')
+   const default_password = _.defaultTo(process.env.PGPASSWORD, undefined)
+   const default_host = _.defaultTo(process.env.PGHOST, 'localhost')
+   const default_database = _.defaultTo(process.env.PGDATABASE, 'postgres')
+   const default_port = _.toInteger(_.defaultTo(process.env.PGPORT, 5432))
+   const default_ssl = _.defaultTo(process.env.PGSSLMODE, 'disable')
+
+   const params = Url.parse(_.defaultTo(connection_string, ''), true)
    const [user, password] = _.isNil(params.auth) ? [default_user, default_password] : params.auth.split(':', 2)
 
    const port = _.toInteger(_.defaultTo(params.port, default_port))
@@ -423,7 +427,7 @@ export class TinyPg {
                return _.get(params, m.name)
             })
 
-            const query: T.TinyQuery = db_call.config.prepared
+            const query: TinyQuery = db_call.config.prepared
                ? new Pg.Query({
                     name: db_call.prepared_name,
                     text: db_call.config.parameterized_query,

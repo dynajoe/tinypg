@@ -1,7 +1,6 @@
 import { EventEmitter } from 'events'
 import { TinyPgErrorTransformer } from './errors'
 import { TlsOptions } from 'tls'
-import { Query } from 'pg'
 
 export type HookCollection = { [P in keyof Required<TinyHooks>]: TinyHooks[P][] }
 
@@ -142,8 +141,4 @@ export interface TinyPgEvents extends EventEmitter {
    on(event: 'submit', listener: (x: QuerySubmitContext) => void): this
 
    emit(event: 'query' | 'submit' | 'result', ...args: any[]): boolean
-}
-
-export interface TinyQuery extends Query {
-   callback?(err: Error, result: any): void
 }

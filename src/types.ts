@@ -51,7 +51,7 @@ export interface HookSetWithContext {
 }
 
 export interface TinyPgOptions {
-   connection_string: string
+   connection_string?: string
    tls_options?: TlsOptions
    root_dir?: string | string[]
    use_prepared_statements?: boolean

@@ -1,6 +1,30 @@
 [![GitHub tag](https://img.shields.io/github/tag/joeandaverde/tinypg.svg?style=flat)](https://github.com/joeandaverde/tinypg/releases)
 [![Actions Status](https://github.com/joeandaverde/tinypg/workflows/Test/badge.svg)](https://github.com/joeandaverde/tinypg/actions)
 
+# Quick Start
+```sh
+npm i tinypg
+```
+
+```typescript
+import { TinyPg } from 'tinypg'
+
+// Options default to PG environment variables
+const db = new TinyPg()
+
+async function main() {
+   const result = await db.query(`SELECT 'Hello, World'`)
+
+   console.log(result)
+}
+
+main()
+// Prints:
+// { row_count: 1,
+//  rows: [ { '?column?': 'Hello, World' } ],
+//  command: 'SELECT' }
+```
+
 # Introduction
 
 TinyPg makes it possible to use objects as the source for parameters in a query. For example:

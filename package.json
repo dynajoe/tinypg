@@ -1,6 +1,6 @@
 {
   "name": "tinypg",
-  "version": "5.2.0",
+  "version": "5.3.0",
   "description": "Easy way to call sql files using postgres.",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -39,9 +39,9 @@
     "debug": "3.1.0",
     "glob": "7.1.4",
     "lodash": "4.17.15",
-    "node-uuid": "1.4.8",
     "pg-format": "1.0.4",
-    "tinypg-parser": "^1.0.0"
+    "tinypg-parser": "^1.0.0",
+    "uuid": "8.0.0"
   },
   "devDependencies": {
     "@types/chai": "3.4.34",
@@ -49,6 +49,7 @@
     "@types/mocha": "2.2.41",
     "@types/node": "^8.10.59",
     "@types/pg": "^7.14.3",
+    "@types/uuid": "^7.0.3",
     "chai": "^3.4.1",
     "mocha": "^7.1.1",
     "pg": "^7.18.2",

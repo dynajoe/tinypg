@@ -3,6 +3,7 @@ import * as T from './types'
 import * as Pg from 'pg'
 import * as P from './parser'
 import * as Util from './util'
+import * as Uuid from 'uuid'
 import { EventEmitter } from 'events'
 import * as Url from 'url'
 import * as E from './errors'
@@ -10,7 +11,6 @@ import { parseSql } from 'tinypg-parser'
 import { createHash } from 'crypto'
 import { TlsOptions } from 'tls'
 
-const Uuid = require('node-uuid')
 const PgFormat = require('pg-format')
 
 const Debug = require('debug')

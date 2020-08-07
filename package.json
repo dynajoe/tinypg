@@ -54,8 +54,8 @@
     "mocha": "^7.1.1",
     "pg": "^7.18.2",
     "rimraf": "^3.0.2",
-    "source-map-support": "0.5.13",
-    "typescript": "3.6.3"
+    "source-map-support": "^0.5.19",
+    "typescript": "^3.9.7"
   },
   "peerDependencies": {
     "pg": "^7.4.1"

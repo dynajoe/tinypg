@@ -2,6 +2,10 @@
 
 Update pg peer dependency to at least 8.0.0
 
+# 5.3.1 - 2020-08-21
+
+Update dependencies.
+
 # 5.1.0 - 2020-03-22
 
 Update dev dependencies. Use new when constructing node pg Query type internally because of deprecation warning.

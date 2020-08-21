@@ -58,6 +58,6 @@
     "typescript": "^3.9.7"
   },
   "peerDependencies": {
-    "pg": "^7.4.1"
+    "pg": "^8.0.0"
   }
 }

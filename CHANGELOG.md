@@ -1,3 +1,7 @@
+# 6.0.1 - 2021-02-19
+
+Update dependencies.
+
 # 6.0.0 - 2020-08-21
 
 Update pg peer dependency to at least 8.0.0

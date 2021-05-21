@@ -364,7 +364,7 @@ export class TinyPg {
 
       // Work around node-postgres swallowing queries after a connection error
       // https://github.com/brianc/node-postgres/issues/718
-      const connection_failed_promise = new Promise<any>((resolve, reject) => {
+      const connection_failed_promise = new Promise<void>((resolve, reject) => {
          const checkForConnection = () => {
             if (call_completed) {
                resolve()
@@ -469,7 +469,14 @@ export class TinyPg {
       }
 
       try {
-         const data = await Promise.race([connection_failed_promise, query_promise()])
+         const data = await Promise.race([
+            connection_failed_promise.then(() => null),
+            query_promise()
+         ])
+
+         if (_.isNil(data)) {
+            throw new E.TinyPgError("connection aborted")
+         }
 
          emitQueryComplete(createCompleteContext(null, data))
 

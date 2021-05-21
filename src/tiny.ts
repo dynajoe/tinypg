@@ -5,11 +5,9 @@ import * as P from './parser'
 import * as Util from './util'
 import * as Uuid from 'uuid'
 import { EventEmitter } from 'events'
-import * as Url from 'url'
 import * as E from './errors'
 import { parseSql } from 'tinypg-parser'
 import { createHash } from 'crypto'
-import { TlsOptions } from 'tls'
 
 const PgFormat = require('pg-format')
 
@@ -19,32 +17,6 @@ const log = Debug('tinypg')
 
 interface TinyQuery extends Pg.Query {
    callback?(err: Error, result: any): void
-}
-
-const parseConnectionConfigFromUrlOrDefault = (connection_string?: string, tls_options?: TlsOptions): Pg.PoolConfig => {
-   const default_user = _.defaultTo(process.env.PGUSER, 'postgres')
-   const default_password = _.defaultTo(process.env.PGPASSWORD, undefined)
-   const default_host = _.defaultTo(process.env.PGHOST, 'localhost')
-   const default_database = _.defaultTo(process.env.PGDATABASE, 'postgres')
-   const default_port = _.toInteger(_.defaultTo(process.env.PGPORT, 5432))
-   const default_ssl = _.defaultTo(process.env.PGSSLMODE, 'disable')
-
-   const params = Url.parse(_.defaultTo(connection_string, ''), true)
-   const [user, password] = _.isNil(params.auth) ? [default_user, default_password] : params.auth.split(':', 2)
-
-   const port = _.toInteger(_.defaultTo(params.port, default_port))
-   const database = _.isNil(params.pathname) ? default_database : params.pathname.split('/')[1]
-   const enable_ssl = !_.includes(['disable', 'allow'], _.get(params.query, 'sslmode', default_ssl))
-   const host = _.defaultTo(params.hostname, default_host)
-
-   return {
-      user: user,
-      password: password,
-      host: host,
-      port: port,
-      database: database,
-      ssl: enable_ssl ? _.defaultTo(tls_options, true) : false,
-   }
 }
 
 export class TinyPg {
@@ -68,10 +40,8 @@ export class TinyPg {
 
       const pool_options = _.isNil(options.pool_options) ? {} : options.pool_options
 
-      const config_from_url = parseConnectionConfigFromUrlOrDefault(options.connection_string, options.tls_options)
-
       const pool_config: Pg.PoolConfig & { log: any } = {
-         ...config_from_url,
+         connectionString: options.connection_string,
          keepAlive: pool_options.keep_alive,
          connectionTimeoutMillis: pool_options.connection_timeout_ms,
          idleTimeoutMillis: pool_options.idle_timeout_ms,

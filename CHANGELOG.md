@@ -1,3 +1,9 @@
+# 7.0.0 - 2021-05-20
+
+* Pass connection_string directly to node-postgres
+* Update dependencies
+* Throw an error when node-postgres client connection stream is destroyed during a query
+
 # 6.0.0 - 2020-08-21
 
 Update pg peer dependency to at least 8.0.0

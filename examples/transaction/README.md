@@ -1,17 +1,20 @@
 # TinyPg Example Project
 
-To get started run the following commands from the base directory of this git repository. You may need to tweak the postgres connection string and/or psql arguments.
+To get started run the following commands from the base directory of this example.
 
-```
-# Start postgres in a docker container
-docker-compose up -d
-
-# Create the example tables
-PGPASSWORD=tinypg psql -U postgres -h 127.0.0.1 -p 54999 -f setup.sql
-
-# Configure our test application
-npm install
-
-# Start the test application
-npm start
-```
+1. Start postgres in a docker container. This also mounts a local directory that contains the DDL to configure the database.
+    ```bash
+    docker-compose up -d
+    ```
+1. Migrate the example schema
+    ```bash
+    docker-compose exec postgres psql -U postgres -f /migrations/setup.sql
+    ```
+1. Install packages
+    ```bash
+    npm install
+    ```
+1. Run the application
+    ```bash
+    npm start
+    ```

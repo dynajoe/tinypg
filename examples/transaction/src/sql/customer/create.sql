@@ -6,4 +6,4 @@ VALUES (
    :first_name,
    :last_name
 )
-RETURNING *;
+RETURNING customer_id;

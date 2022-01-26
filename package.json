@@ -35,10 +35,10 @@
     "node": ">= 12.0.0"
   },
   "dependencies": {
+    "@scaleleap/pg-format": "^1.0.0",
     "debug": "^4.3.1",
     "glob": "^7.1.7",
     "lodash": "^4.17.21",
-    "pg-format": "^1.0.4",
     "tinypg-parser": "^1.0.0",
     "uuid": "^8.3.2"
   },

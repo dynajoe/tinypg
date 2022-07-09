@@ -9,7 +9,7 @@ import * as E from './errors'
 import { parseSql } from 'tinypg-parser'
 import { createHash } from 'crypto'
 
-const PgFormat = require('pg-format')
+const PgFormat = require('@scaleleap/pg-format')
 
 const Debug = require('debug')
 

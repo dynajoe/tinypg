@@ -8,8 +8,7 @@ import { EventEmitter } from 'events'
 import * as E from './errors'
 import { parseSql } from 'tinypg-parser'
 import { createHash } from 'crypto'
-
-const PgFormat = require('@scaleleap/pg-format')
+import { format } from '@scaleleap/pg-format'
 
 const Debug = require('debug')
 
@@ -520,7 +519,7 @@ export class FormattableDbCall {
    }
 
    format(...args: any[]): FormattableDbCall {
-      const formatted_sql = PgFormat(this.db_call.config.text, ...args)
+      const formatted_sql = format(this.db_call.config.text, ...args)
       const parsed = parseSql(formatted_sql)
 
       const new_db_call = new DbCall({

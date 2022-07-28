@@ -63,6 +63,7 @@ export interface TinyPgOptions {
       min?: number
       connection_timeout_ms?: number
       idle_timeout_ms?: number
+      allow_exit_on_idle?: boolean;
       application_name?: string
       statement_timeout_ms?: number
       keep_alive?: boolean

@@ -44,6 +44,7 @@ export class TinyPg {
          keepAlive: pool_options.keep_alive,
          connectionTimeoutMillis: pool_options.connection_timeout_ms,
          idleTimeoutMillis: pool_options.idle_timeout_ms,
+         allowExitOnIdle: pool_options.allow_exit_on_idle,
          application_name: pool_options.application_name,
          statement_timeout: pool_options.statement_timeout_ms,
          max: pool_options.max,

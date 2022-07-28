@@ -20,7 +20,7 @@ export function parseFiles(root_directories: string[]): T.SqlFile[] {
             const path = Path.parse(relative_path)
 
             const file_contents = Fs.readFileSync(f, 'utf8')
-            const path_parts = _.compact(path.dir.split(Path.sep).concat(path.name))
+            const path_parts = _.compact(path.dir.split('/').concat(path.name))
             const sql_name = path_parts.join('_')
             const sql_key = path_parts.join('.')
 

@@ -2,7 +2,6 @@ import * as T from './types'
 import * as _ from 'lodash'
 import * as Fs from 'fs'
 import * as Path from 'path'
-import * as E from './errors'
 import { parseSql } from 'tinypg-parser'
 
 const Glob = require('glob')
@@ -44,7 +43,7 @@ export function parseFiles(root_directories: string[]): T.SqlFile[] {
          return c[0].relative_path
       }).join(', ')}). All source files under root dirs must have different relative paths.`
 
-      throw new E.TinyPgError(message)
+      throw new T.TinyPgError(message)
    }
 
    return result

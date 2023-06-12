@@ -179,7 +179,7 @@ export class TinyPg {
 
             await tx_client.query('ROLLBACK')
 
-            hook_lifecycle.onRollback(transaction_id, error)
+            hook_lifecycle.onRollback(transaction_id, Util.thrownAsError(error))
 
             throw error
          } finally {
@@ -477,12 +477,12 @@ export class TinyPg {
 
          return data
       } catch (e) {
-         const tiny_stack = `[${db_call.config.name}]\n\n${db_call.config.text}\n\n${e.stack}`
+         const tiny_stack = `[${db_call.config.name}]\n\n${db_call.config.text}\n\n${_.get(e, 'stack')}`
          const complete_context = createCompleteContext(e, null)
 
          emitQueryComplete(complete_context)
 
-         const tiny_error = new T.TinyPgError(`${e.message}`, tiny_stack, complete_context)
+         const tiny_error = new T.TinyPgError(`${_.get(e, 'message')}`, tiny_stack, complete_context)
 
          throw this.error_transformer(tiny_error)
       } finally {

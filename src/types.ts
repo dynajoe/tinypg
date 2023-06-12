@@ -1,5 +1,4 @@
 import { EventEmitter } from 'events'
-import { TinyPgErrorTransformer } from './errors'
 import { TlsOptions } from 'tls'
 
 export type HookCollection = { [P in keyof Required<TinyHooks>]: TinyHooks[P][] }
@@ -141,4 +140,23 @@ export interface TinyPgEvents extends EventEmitter {
    on(event: 'submit', listener: (x: QuerySubmitContext) => void): this
 
    emit(event: 'query' | 'submit' | 'result', ...args: any[]): boolean
+}
+
+export type TinyPgErrorTransformer = (error: TinyPgError) => any
+
+export class TinyPgError extends Error {
+   name: string
+   message: string
+   queryContext: QuerySubmitContext | QueryBeginContext | QueryCompleteContext | undefined
+
+   constructor(message: string, stack?: string, query_context?: QuerySubmitContext | QueryBeginContext | QueryCompleteContext) {
+      super(message)
+
+      Object.setPrototypeOf(this, new.target.prototype)
+
+      this.stack = stack
+      this.name = this.constructor.name
+      this.message = message
+      this.queryContext = query_context
+   }
 }

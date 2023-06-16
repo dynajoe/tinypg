@@ -5,12 +5,11 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "scripts": {
-    "build-test": "tsc -p src/test",
+    "build-test": "npm run clean && tsc -p src/test",
     "build": "npm run clean && tsc",
     "clean": "rimraf './dist/' './src/**/*.js' './src/**/*.map'",
     "prepare": "npm run build",
-    "test": "npm run clean && npm run build-test && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --full-trace -t 15000 $MOCHA_FLAGS --require source-map-support/register --reporter spec",
-    "test:ci": "npm run build-test && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --full-trace -t 15000 $MOCHA_FLAGS --require source-map-support/register --reporter spec",
+    "test": "npm run build-test && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --full-trace -t 15000 $MOCHA_FLAGS --require source-map-support/register --reporter spec",
     "test-debugging": "npm run build-test && NODE_ENV=test ./node_modules/mocha/bin/mocha 'src/test/**/*.js' --inspect-brk --no-timeouts --colors --full-trace $MOCHA_FLAGS --require source-map-support/register --reporter spec"
   },
   "repository": {
@@ -45,7 +44,7 @@
   },
   "devDependencies": {
     "@types/chai": "3.4.34",
-    "@types/lodash": "^4.14.169",
+    "@types/lodash": "4.14.158",
     "@types/mocha": "2.2.41",
     "@types/node": "^8.10.59",
     "@types/pg": "^8.6.0",

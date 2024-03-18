@@ -24,7 +24,22 @@ export async function stackTraceAccessor<T>(is_enabled: boolean, fn: () => Promi
    try {
       return await fn()
    } catch (error) {
-      error.stack = `${error.stack ? `${error.stack}\nFrom: ` : ''}${stack_trace_error.stack}`
+      if (error instanceof Error) {
+         error.stack = `${error.stack ? `${error.stack}\nFrom: ` : ''}${stack_trace_error.stack}`
+      }
+
       throw error
+   }
+}
+
+export function thrownAsError(thrown: unknown): Error {
+   if (thrown instanceof Error) {
+      return thrown
+   }
+
+   try {
+      return new Error(JSON.stringify(thrown))
+   } catch {
+      return new Error(String(thrown))
    }
 }

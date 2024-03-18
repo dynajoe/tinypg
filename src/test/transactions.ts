@@ -97,9 +97,9 @@ describe('Transactions', () => {
 
       it('should require thennable from transaction function', () => {
          return tiny
-            .transaction(() => {
+            .transaction((() => {
                return null
-            })
+            }) as any)
             .then(() => expect.fail('this should not succeed'))
             .catch(error => {
                expect(error.message).to.contain('thennable')
@@ -174,9 +174,9 @@ describe('Transactions', () => {
 
       it('should require thennable from transaction function', () => {
          return tiny
-            .transaction(() => {
+            .transaction((() => {
                return null
-            })
+            }) as any)
             .then(() => expect.fail('this should not succeed'))
             .catch(error => {
                expect(error.message).to.contain('thennable')

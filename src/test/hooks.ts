@@ -60,12 +60,15 @@ describe('Hooks', () => {
 
          describe('and there is a transaction', () => {
             it('should keep the same transaction_id across multiple sql calls', async () => {
-               let transaction_ids = []
-               let query_ids = []
+               let transaction_ids: string[] = []
+               let query_ids: string[] = []
 
                const hooks: TinyHooks = {
                   preSql: (ctx, name, params) => {
-                     transaction_ids.push(ctx.transaction_id)
+                     if (!_.isNil(ctx.transaction_id)) {
+                        transaction_ids.push(ctx.transaction_id)
+                     }
+
                      query_ids.push(ctx.query_id)
                      return { ctx: { ...ctx, foo: 'bar' }, args: [name, params] }
                   },
@@ -265,11 +268,14 @@ describe('Hooks', () => {
 
          describe('and there is a transaction', () => {
             it('should keep the same transaction_id across multiple query calls', async () => {
-               let transaction_ids = []
-               let query_ids = []
+               let transaction_ids: string[] = []
+               let query_ids: string[] = []
                const hooks: TinyHooks = {
                   preRawQuery: (ctx, name, params) => {
-                     transaction_ids.push(ctx.transaction_id)
+                     if (!_.isNil(ctx.transaction_id)) {
+                        transaction_ids.push(ctx.transaction_id)
+                     }
+
                      query_ids.push(ctx.query_id)
                      return { ctx: { ...ctx, foo: 'bar' }, args: [name, params] }
                   },
@@ -428,7 +434,7 @@ describe('Hooks', () => {
    describe('transaction', () => {
       it('should thread transaction context (withHooks and via options)', async () => {
          let final_context: any
-         let tx_id: string
+         let tx_id: string = ''
 
          const hooks: TinyHooks = {
             preTransaction: transaction_id => {
@@ -479,10 +485,10 @@ describe('Hooks', () => {
 
       describe('and every hook throws an error', () => {
          it('should catch the errors', async () => {
-            let pre_tx_id: string
-            let commit_tx_id: string
-            let rollback_tx_id: string
-            let begin_tx_id: string
+            let pre_tx_id: string | null = null
+            let commit_tx_id: string | null = null
+            let rollback_tx_id: string | null = null
+            let begin_tx_id: string | null = null
 
             const hooks: TinyHooks = {
                preTransaction: transaction_id => {
@@ -593,8 +599,8 @@ describe('Hooks', () => {
    })
 
    describe('with async_hooks', () => {
-      let final_context = null
-      let hooked_tiny = null
+      let final_context: any | null = null
+      let hooked_tiny: TinyPg | null = null
 
       beforeEach(() => {
          hooked_tiny = tiny.withHooks({
@@ -620,7 +626,7 @@ describe('Hooks', () => {
       it('should run preSql in the same execution context', async () => {
          const caller_async_execution_id = AsyncHooks.executionAsyncId()
 
-         await hooked_tiny.sql('a.select')
+         await hooked_tiny!.sql('a.select')
 
          expect(caller_async_execution_id).to.not.equal(0)
          expect(final_context.preSql.async_id).to.equal(caller_async_execution_id)

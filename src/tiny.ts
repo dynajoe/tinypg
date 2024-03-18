@@ -5,7 +5,6 @@ import * as P from './parser'
 import * as Util from './util'
 import * as Uuid from 'uuid'
 import { EventEmitter } from 'events'
-import * as E from './errors'
 import { parseSql } from 'tinypg-parser'
 import { createHash } from 'crypto'
 import { format } from '@scaleleap/pg-format'
@@ -24,7 +23,7 @@ export class TinyPg {
    public sql_db_calls: { [key: string]: DbCall }
 
    private hooks: T.TinyHooks[]
-   private error_transformer: E.TinyPgErrorTransformer
+   private error_transformer: T.TinyPgErrorTransformer
    private sql_files: T.SqlFile[]
    private options: T.TinyPgOptions
    private transaction_id?: string
@@ -180,7 +179,7 @@ export class TinyPg {
 
             await tx_client.query('ROLLBACK')
 
-            hook_lifecycle.onRollback(transaction_id, error)
+            hook_lifecycle.onRollback(transaction_id, Util.thrownAsError(error))
 
             throw error
          } finally {
@@ -468,25 +467,22 @@ export class TinyPg {
       }
 
       try {
-         const data = await Promise.race([
-            connection_failed_promise.then(() => null),
-            query_promise()
-         ])
+         const data = await Promise.race([connection_failed_promise.then(() => null), query_promise()])
 
          if (_.isNil(data)) {
-            throw new E.TinyPgError("connection aborted")
+            throw new T.TinyPgError('connection aborted')
          }
 
          emitQueryComplete(createCompleteContext(null, data))
 
          return data
       } catch (e) {
-         const tiny_stack = `[${db_call.config.name}]\n\n${db_call.config.text}\n\n${e.stack}`
+         const tiny_stack = `[${db_call.config.name}]\n\n${db_call.config.text}\n\n${_.get(e, 'stack')}`
          const complete_context = createCompleteContext(e, null)
 
          emitQueryComplete(complete_context)
 
-         const tiny_error = new E.TinyPgError(`${e.message}`, tiny_stack, complete_context)
+         const tiny_error = new T.TinyPgError(`${_.get(e, 'message')}`, tiny_stack, complete_context)
 
          throw this.error_transformer(tiny_error)
       } finally {

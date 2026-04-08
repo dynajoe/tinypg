@@ -370,11 +370,11 @@ export class TinyPg {
             } else if (_.get(client, 'connection.stream.destroyed', false)) {
                reject(new Error('Connection terminated'))
             } else {
-               setTimeout(checkForConnection, 500)
+               setTimeout(checkForConnection, 500).unref();
             }
          }
 
-         setTimeout(checkForConnection, 500)
+         setTimeout(checkForConnection, 500).unref();
       })
 
       const query_promise = async (): Promise<T.Result<T>> => {
